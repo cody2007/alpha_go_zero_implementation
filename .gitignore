@@ -1,0 +1,13 @@
+*.prof
+p.py
+*.o
+*.swn
+*.lprof
+*.so
+*.npy
+*.pyc
+*.swp
+*.swo
+*.exp
+*.lib
+*.pyd
