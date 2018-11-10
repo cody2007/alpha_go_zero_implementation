@@ -129,7 +129,7 @@ def nn_mv():
 				draw(True)
 				pygame.display.set_caption('%i %2.1f' % (sim, time.time() - t_start))
 				'''
-				print sim, time.time() - t_start
+				print 'simulation', sim, 'total elapsed time', time.time() - t_start
 
 		### make move
 		Q_map, P_map, visit_count_map = ret_stats(0) 
