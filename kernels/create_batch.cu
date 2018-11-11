@@ -39,7 +39,7 @@ __global__ void create_batch_kernel(float * imgs, char * board, char * board_pre
 	else
 		imgs[icoord] = -1;
 
-	//////////// valid moves and tree leaf creation
+	//////////// valid moves
 	// adj search vars
 	int coord_stack[MAP_SZ];
 	int coord_stack_sz;
