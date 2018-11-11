@@ -15,7 +15,7 @@ import architectures.tree_tf_op as arch
 import py_util.py_util as pu
 from scipy.special import gamma
 import gnu_go_test as gt
-sdir = 'models/'
+sdir = 'models/' # directory to save and load models
 
 ################################### configuration: 
 #### load previous model or start from scratch?

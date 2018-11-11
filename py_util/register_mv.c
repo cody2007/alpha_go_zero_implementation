@@ -1,3 +1,4 @@
+// register move in tree, initialize node if not already initialized
 static PyObject *register_mv(PyObject *self, PyObject *args){
 	PyArrayObject *chosen_coord_np;
 	int moving_player, * chosen_coord;
