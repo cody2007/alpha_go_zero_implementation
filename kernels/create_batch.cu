@@ -47,7 +47,7 @@ __global__ void create_batch_kernel(float * imgs, char * board, char * board_pre
 	__syncthreads();
 	if(map_coord != 0) return;
 
-	#define ADD_MV(COORD) { valid_mv_map[gcoord] = 1; valid_mv_map_internal[gcoord] = 1; }
+	#define ADD_MV { valid_mv_map[gcoord] = 1; valid_mv_map_internal[gcoord] = 1; }
 	
 	for(map_coord = 0; map_coord < MAP_SZ; map_coord++){
 		gcoord = game_offset + map_coord;
@@ -59,7 +59,7 @@ __global__ void create_batch_kernel(float * imgs, char * board, char * board_pre
 
 		// add move
 		if(LIBERTY(map_coord, player_val)){
-			ADD_MV(map_coord)
+			ADD_MV
 			continue;
 		}
 
@@ -99,7 +99,7 @@ __global__ void create_batch_kernel(float * imgs, char * board, char * board_pre
 			matching = board_pprev[game_offset + loc] == board_tmp[loc];
 		}
 
-		if(matching == 0) ADD_MV(map_coord) 
+		if(matching == 0) ADD_MV 
 
 	} // map loop
 }
