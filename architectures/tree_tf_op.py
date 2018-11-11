@@ -7,7 +7,7 @@ import os
 sess = tf.InteractiveSession()
 
 hdir = os.getenv('HOME')
-tf_op = tf.load_op_library(hdir + '/strat/strat/go_op_w_cpu_tree/cuda_op_kernel.so')
+tf_op = tf.load_op_library('cuda_op_kernel.so')
 
 imgs_shape = [gv.BATCH_SZ, gv.n_rows, gv.n_cols, gv.n_input_channels]
 map_prod = np.prod(gv.map_sz)
