@@ -19,12 +19,13 @@ sdir = 'models/' # directory to save and load models
 
 ################################### configuration: 
 #### load previous model or start from scratch?
-#save_nm = None # this results in the optimization starting from scratch (comment out line below)
-save_nm = 'go_cpu_tree_0.200000EPS_7GMSZ_1000N_SIM_0.001000L2_LAMBDA_0.900000MOMENTUM_0.025000VAL_LAMBDA_1.000000CPUCT_20N_TURNS_128N_FILTERS_EPS0.110000_EPS0.020000.npy'
+save_nm = None # this results in the optimization starting from scratch (comment out line below)
+#save_nm = 'go_cpu_tree_0.200000EPS_7GMSZ_1000N_SIM_0.001000L2_LAMBDA_0.900000MOMENTUM_0.025000VAL_LAMBDA_1.000000CPUCT_20N_TURNS_128N_FILTERS_EPS0.110000_EPS0.020000_EPS0.010000.npy'
+save_nm = 'go_cpu_tree_0.2000EPS_7GMSZ_1000N_SIM_20N_TURNS_128N_FILTERS_0.50N_TURNS_FRAC_TRAIN.npy'
 
 ###### variables to save
 save_vars = ['LSQ_LAMBDA', 'LSQ_REG_LAMBDA', 'POL_CROSS_ENTROP_LAMBDA', 'VAL_LAMBDA', 'VALR_LAMBDA', 'L2_LAMBDA',
-	'FILTER_SZS', 'STRIDES', 'N_FILTERS', 'N_FC1', 'EPS', 'MOMENTUM', 'SAVE_FREQ', 'N_SIM', 'N_TURNS', 'CPUCT',
+	'FILTER_SZS', 'STRIDES', 'N_FILTERS', 'N_FC1', 'EPS', 'MOMENTUM', 'SAVE_FREQ', 'N_SIM', 'N_TURNS', 'CPUCT', 'N_TURNS_FRAC_TRAIN',
 	'N_EVAL_NN_GMS', 'N_EVAL_NN_GNU_GMS', 'N_EVAL_TREE_GMS', 'N_EVAL_TREE_GNU_GMS', 'CHKP_FREQ',
 	'save_nm', 'DIR_A', 'start_time', 'EVAL_FREQ', 'boards', 'scores']
 logs = ['val_mean_sq_err', 'pol_cross_entrop', 'pol_max_pre', 'pol_max', 'val_pearsonr','opt_batch','eval_batch']
@@ -66,6 +67,8 @@ if save_nm is None:
 	N_SIM = 1000 # number of simulations at each turn
 	N_TURNS = 20 # number of moves per player per game
 
+	N_TURNS_FRAC_TRAIN = .5 # fraction of (random) turns to run bp on, remainder are discarded
+
 	##### number of batch evaluations for testing model
 	N_EVAL_NN_GMS = 1 # model evaluation for printing
 	N_EVAL_NN_GNU_GMS = 1
@@ -73,14 +76,14 @@ if save_nm is None:
 	N_EVAL_TREE_GNU_GMS = 0
 
 	######### save and checkpoint frequency
-	SAVE_FREQ = N_TURNS*1
+	SAVE_FREQ = N_TURNS*N_TURNS_FRAC_TRAIN
 	EVAL_FREQ = SAVE_FREQ*1
 	CHKP_FREQ = 60*60
 
 	start_time = datetime.now()
 	save_t = datetime.now()
 
-	save_nm = 'go_cpu_tree_%fEPS_%iGMSZ_%iN_SIM_%fL2_LAMBDA_%fMOMENTUM_%fVAL_LAMBDA_%fCPUCT_%iN_TURNS_%iN_FILTERS.npy' % (EPS, gv.n_rows, N_SIM, L2_LAMBDA, MOMENTUM, VAL_LAMBDA, CPUCT, N_TURNS, N_FILTERS[0])
+	save_nm = 'go_cpu_tree_%1.4fEPS_%iGMSZ_%iN_SIM_%iN_TURNS_%iN_FILTERS_%1.2fN_TURNS_FRAC_TRAIN.npy' % (EPS, gv.n_rows, N_SIM, N_TURNS, N_FILTERS[0], N_TURNS_FRAC_TRAIN)
 
 	boards = {}; scores = {} # eval
 	save_d = {}
@@ -107,14 +110,14 @@ else:
 		exec('%s = save_d["%s"]' % (key,key))
 
 	EPS_ORIG = EPS
-	EPS = 2e-2
+	EPS = 5e-3
 
 	save_nm_orig = save_nm
 
 	# append new learning rate to file name if not already added
-	append_txt = '_EPS%f.npy' % EPS
+	'''append_txt = '_EPS%f.npy' % EPS
 	if EPS_ORIG != EPS and save_nm.find(append_txt) == -1:
-		save_nm = save_nm.split('.npy')[0] + append_txt	
+		save_nm = save_nm.split('.npy')[0] + append_txt	'''
 	print 'saving to:'
 	print save_nm
 
@@ -262,7 +265,7 @@ while True:
 	#############################
 	# train
 	random.shuffle(inds_total)
-	for batch in range(N_TURNS):
+	for batch in range(np.int(N_TURNS_FRAC_TRAIN*N_TURNS)):
 		inds = inds_total[batch*gv.BATCH_SZ + np.arange(gv.BATCH_SZ)]
 		
 		board2, tree_probs2 = pu.rotate_reflect_imgs(board[inds], tree_probs[inds]) # rotate and reflect board randomly
