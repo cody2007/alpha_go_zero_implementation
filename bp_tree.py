@@ -115,9 +115,9 @@ else:
 	save_nm_orig = save_nm
 
 	# append new learning rate to file name if not already added
-	'''append_txt = '_EPS%f.npy' % EPS
+	append_txt = '_EPS%f.npy' % EPS
 	if EPS_ORIG != EPS and save_nm.find(append_txt) == -1:
-		save_nm = save_nm.split('.npy')[0] + append_txt	'''
+		save_nm = save_nm.split('.npy')[0] + append_txt
 	print 'saving to:'
 	print save_nm
 
