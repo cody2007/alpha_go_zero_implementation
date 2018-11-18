@@ -78,7 +78,7 @@ if save_nm is None:
 	######### save and checkpoint frequency
 	SAVE_FREQ = N_TURNS*N_TURNS_FRAC_TRAIN
 	EVAL_FREQ = SAVE_FREQ*1
-	CHKP_FREQ = 60*60
+	CHKP_FREQ = 60*60*10
 
 	start_time = datetime.now()
 	save_t = datetime.now()
