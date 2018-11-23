@@ -78,8 +78,8 @@ def nn_mv():
 	
 	t_start = time.time()
 	arch.sess.run(arch.session_backup)
-	pu.session_backup()
 	pu.init_tree()
+	pu.session_backup()
 
 	if run_net:
 		if turn == 0:	
