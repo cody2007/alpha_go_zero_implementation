@@ -19,7 +19,7 @@ sdir = 'models/' # directory to save and load models
 
 ################################### configuration: 
 #### load previous model or start from scratch?
-save_nm = None # this results in the optimization starting from scratch (comment out line below)
+#save_nm = None # this results in the optimization starting from scratch (comment out line below)
 #save_nm = 'go_cpu_tree_0.200000EPS_7GMSZ_1000N_SIM_0.001000L2_LAMBDA_0.900000MOMENTUM_0.025000VAL_LAMBDA_1.000000CPUCT_20N_TURNS_128N_FILTERS_EPS0.110000_EPS0.020000_EPS0.010000.npy'
 save_nm = 'go_cpu_tree_0.2000EPS_7GMSZ_1000N_SIM_20N_TURNS_128N_FILTERS_0.50N_TURNS_FRAC_TRAIN.npy'
 
@@ -78,7 +78,7 @@ if save_nm is None:
 	######### save and checkpoint frequency
 	SAVE_FREQ = N_TURNS*N_TURNS_FRAC_TRAIN
 	EVAL_FREQ = SAVE_FREQ*1
-	CHKP_FREQ = 60*60*10
+	CHKP_FREQ = 60*60*10*2
 
 	start_time = datetime.now()
 	save_t = datetime.now()
@@ -110,7 +110,7 @@ else:
 		exec('%s = save_d["%s"]' % (key,key))
 
 	EPS_ORIG = EPS
-	EPS = 5e-3
+	#EPS = 5e-3
 
 	save_nm_orig = save_nm
 
