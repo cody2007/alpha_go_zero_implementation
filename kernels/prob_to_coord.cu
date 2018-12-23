@@ -43,16 +43,13 @@ __global__ void prob_to_coord_kernel(float * prob_map, int * to_coord,
 		//DASSERT(PROB >= 0 && PROB <= 1)
 
 		if((rand_val >= probs_sum) && (rand_val < (probs_sum + PROB))){
-			if(loc < MAP_SZ)
-				to_coord[gm] = loc;
-			else
-				to_coord[gm] = -1;
+			to_coord[gm] = loc;
 			return;
 		}
 		probs_sum += PROB;
 	}
 
-	to_coord[gm] = -1;
+	to_coord[gm] = MAP_SZ;
 
 	DASSERT(probs_sum <= 1.01)
 	DASSERT(probs_sum >= .999)

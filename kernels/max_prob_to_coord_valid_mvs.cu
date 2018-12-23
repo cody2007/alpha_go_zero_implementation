@@ -9,10 +9,10 @@ __global__ void max_prob_to_coord_valid_mvs_kernel(float * prob_map, int * to_co
 	// determine max prob
 	float max_prob = -999;
 	int max_map_loc;
-	for(int mv_ind = 1; mv_ind < n_valid_mvs; mv_ind++){ // skip pass move
+	for(int mv_ind = 0; mv_ind < n_valid_mvs; mv_ind++){ // skip pass move
 		int map_loc = valid_mv_inds[mv_ind];
-		CHK_VALID_MAP_COORD(map_loc)
-		DASSERT(board[gm*MAP_SZ + map_loc] == 0)
+		CHK_VALID_MV_MAP_COORD(map_loc)
+		DASSERT(map_loc == MAP_SZ || board[gm*MAP_SZ + map_loc] == 0)
 		if(prob_map_cur[map_loc] <= max_prob)
 			continue;
 		max_map_loc = map_loc;

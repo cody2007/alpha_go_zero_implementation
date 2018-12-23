@@ -41,7 +41,7 @@ char * moved_internal; // [BATCH_SZ] used in move_random_ai, req. input to move_
 #define GET_PLAYER_VAL DASSERT((*moving_player == 0) || (*moving_player == 1)); char player_val = ((*moving_player == 0) * 2 )- 1;
 
 #define CHK_VALID_MAP_COORD(COORD) DASSERT((COORD) >= 0 && (COORD) < MAP_SZ)
-#define CHK_VALID_MV_MAP_COORD(COORD) DASSERT((COORD) >= -1 && (COORD) < MAP_SZ)
+#define CHK_VALID_MV_MAP_COORD(COORD) DASSERT((COORD) >= 0 && (COORD) <= MAP_SZ)
 
 // count valid mvs and store n_valid_mvs
 #define COUNT_VALID \

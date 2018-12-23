@@ -4,7 +4,7 @@ static PyObject *return_probs_map(PyObject *self, PyObject *args){
 	///// output
 	npy_intp dims[3];
 	dims[0] = N_TURNS * N_PLAYERS * BATCH_SZ;
-	dims[1] = (MAP_SZ_X * MAP_SZ_Y) + 1;
+	dims[1] = MAP_SZ + 1;
 
 	PyObject * probs_map_np = PyArray_SimpleNew(2, dims, NPY_FLOAT);
 
@@ -42,8 +42,8 @@ static PyObject *return_probs_map(PyObject *self, PyObject *args){
 			for(int mv_ind = 0; mv_ind < n_valid_mvs; mv_ind++){
 				int map_loc = list_valid_mv_inds[LO + mv_ind];
 
-				DASSERT(map_loc >= -1 && map_loc < MAP_SZ);
-				if(map_loc == -1) continue;
+				DASSERT(map_loc >= 0 && map_loc <= MAP_SZ);
+				//if(map_loc == -1) continue;
 
 				probs_map_cur[map_loc] = (float)list_visit_count[LO + mv_ind]; 
 				visit_sum += list_visit_count[LO + mv_ind];
@@ -53,8 +53,8 @@ static PyObject *return_probs_map(PyObject *self, PyObject *args){
 			for(int mv_ind = 0; (visit_sum != 0) && (mv_ind < n_valid_mvs); mv_ind++){
 				int map_loc = list_valid_mv_inds[LO + mv_ind];
 
-				DASSERT(map_loc >= -1 && map_loc < MAP_SZ);
-				if(map_loc == -1) continue;
+				DASSERT(map_loc >= 0 && map_loc <= MAP_SZ);
+				//if(map_loc == -1) continue;
 
 				probs_map_cur[map_loc] /= (float)visit_sum; 
 			}

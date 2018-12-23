@@ -13,8 +13,7 @@ __global__ void prob_to_coord_valid_mvs_kernel(float * prob_map, int * to_coord,
 	for(int mv_ind = 0; mv_ind < n_valid_mvs; mv_ind++){
 		int map_loc = valid_mv_inds[mv_ind];
 		CHK_VALID_MV_MAP_COORD(map_loc)
-		DASSERT(map_loc == -1 || board[gm*MAP_SZ + map_loc] == 0)
-		if(map_loc == -1) map_loc = MAP_SZ+1;\
+		DASSERT(map_loc == MAP_SZ || board[gm*MAP_SZ + map_loc] == 0)
 		probs_sum_orig += prob_map_cur[map_loc];
 	}
 	if(probs_sum_orig == 0) probs_sum_orig = 1;
