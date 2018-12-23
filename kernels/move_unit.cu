@@ -70,6 +70,9 @@ __global__ void move_unit_kernel(int *to_coord, int *moving_player, char * board
 
 	moved[gm] = 0;
 
+	if(to_coord[gm] < 0 || to_coord[gm] > MAP_SZ)
+		printf("to_coord %i gm %i\n", to_coord[gm], gm);
+	
 	DASSERT(to_coord[gm] >= 0 && to_coord[gm] <= MAP_SZ)
 	if(to_coord[gm] >= MAP_SZ) return;
 

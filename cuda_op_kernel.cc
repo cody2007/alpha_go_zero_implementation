@@ -25,9 +25,6 @@ REGISTER_OP("MaxProbToCoordValidMvs")
 	.Input("prob_map: float")
 	.Output("to_coord: int32");
 
-REGISTER_OP("ReturnProbsMap")
-	.Output("probs_map: float"); // [N_TURNS, N_PLAYERS, BATCH_SZ, MAP_SZ_X, MAP_SZ_Y]
-
 #define CREATE_BATCH_SHAPES tensorflow::TensorShape imgs_shape, valid_mv_map_shape;\
 		imgs_shape.AddDim(BATCH_SZ);\
 		imgs_shape.AddDim(MAP_SZ_X);\
@@ -146,7 +143,7 @@ class prob_to_coord : public OpKernel {
 		TensorShape prob_map_shape = prob_map_tensor.shape();
 		ASSERT(prob_map_shape.dims() == 2, "number of dims not correct")
 		ASSERT(prob_map_shape.dim_size(0) == BATCH_SZ, "incorrect input size")
-		ASSERT(prob_map_shape.dim_size(1) == MAP_SZ, "incorrect input size")
+		ASSERT(prob_map_shape.dim_size(1) == (MAP_SZ+1), "incorrect input size")
 
 		TensorShape dir_pre_shape = dir_pre_tensor.shape();
 		ASSERT(dir_pre_shape.dims() == 0, "number of dims not correct")
@@ -183,7 +180,7 @@ class prob_to_coord_valid_mvs : public OpKernel {
 		TensorShape prob_map_shape = prob_map_tensor.shape();
 		ASSERT(prob_map_shape.dims() == 2, "number of dims not correct")
 		ASSERT(prob_map_shape.dim_size(0) == BATCH_SZ, "incorrect input size")
-		ASSERT(prob_map_shape.dim_size(1) == MAP_SZ, "incorrect input size")
+		ASSERT(prob_map_shape.dim_size(1) == (MAP_SZ+1), "incorrect input size")
 
 		////////////////////////////////////// outputs
 		Tensor* to_coord_tensor = nullptr;
@@ -213,7 +210,7 @@ class max_prob_to_coord_valid_mvs : public OpKernel {
 		TensorShape prob_map_shape = prob_map_tensor.shape();
 		ASSERT(prob_map_shape.dims() == 2, "number of dims not correct")
 		ASSERT(prob_map_shape.dim_size(0) == BATCH_SZ, "incorrect input size")
-		ASSERT(prob_map_shape.dim_size(1) == MAP_SZ, "incorrect input size")
+		ASSERT(prob_map_shape.dim_size(1) == (MAP_SZ+1), "incorrect input size")
 
 		////////////////////////////////////// outputs
 		Tensor* to_coord_tensor = nullptr;

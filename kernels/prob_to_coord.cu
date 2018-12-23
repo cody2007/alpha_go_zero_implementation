@@ -51,6 +51,7 @@ __global__ void prob_to_coord_kernel(float * prob_map, int * to_coord,
 
 	to_coord[gm] = MAP_SZ;
 
+	printf("probs_sum %f\n", probs_sum);
 	DASSERT(probs_sum <= 1.01)
 	DASSERT(probs_sum >= .999)
 }

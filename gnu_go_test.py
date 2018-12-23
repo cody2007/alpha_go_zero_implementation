@@ -50,10 +50,16 @@ def init_board(board):
 				f[gm].stdin.write('play %s %s%i\n' % (colors[np.int((board[gm,i,j]+1.)/2)], row_nm[j], gv.n_rows - i))
 
 def move_nn(to_coords, moving_player=0):
+	passes = to_coords == (gv.n_rows*gv.n_cols)
+	to_coords[passes] = 0
 	i, j = np.unravel_index(to_coords, (gv.n_rows, gv.n_cols))
 	for gm in range(gv.BATCH_SZ):
 		#req_ok_or_illegal(gm, 'play %s %s%i\n' % (colors[moving_player], row_nm[j[gm]], gv.n_rows - i[gm]))
-		f[gm].stdin.write('play %s %s%i\n' % (colors[moving_player], row_nm[j[gm]], gv.n_rows - i[gm]))
+		if passes[gm]:
+			cmd = 'play %s pass\n' % colors[moving_player]
+		else:
+			cmd = 'play %s %s%i\n' % (colors[moving_player], row_nm[j[gm]], gv.n_rows - i[gm])
+		f[gm].stdin.write(cmd)
 
 def move_ai(moving_player=1):
 	ai_to_coords = -np.ones(gv.BATCH_SZ, dtype='int32')

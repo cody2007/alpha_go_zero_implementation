@@ -51,7 +51,7 @@ if save_nm is None:
 	CPUCT = 1
 
 	##### model parameters
-	N_LAYERS = 7 #5 # number of model layers
+	N_LAYERS = 5 # number of model layers
 	FILTER_SZS = [3]*N_LAYERS
 	STRIDES = [1]*N_LAYERS
 	F = 128 # number of filters
