@@ -23,7 +23,7 @@ static PyObject *rotate_reflect_imgs(PyObject *self, PyObject *args){
 	int n_chan = dims_in[3];
 
 	ASSERT(map_sz_x == map_sz_y, "board must be sq")
-	ASSERT(pdims_in[0] == BATCH_SZ && pdims_in[1] == (map_sz_x*map_sz_y), "tree_probs incorrect")
+	ASSERT(pdims_in[0] == BATCH_SZ && pdims_in[1] == ((map_sz_x*map_sz_y)+1), "tree_probs incorrect")
 
 	imgs_r_np = PyArray_SimpleNew(4, dims_in, NPY_FLOAT);
 	tree_probs_r_np = PyArray_SimpleNew(2, pdims_in, NPY_FLOAT);
@@ -35,7 +35,7 @@ static PyObject *rotate_reflect_imgs(PyObject *self, PyObject *args){
 	tree_probs_r = (float *) PyArray_DATA((PyArrayObject*) tree_probs_r_np);
 
 	float * imgs_r_pre = malloc(BATCH_SZ*map_sz_x*map_sz_y*n_chan*sizeof(imgs[0]));
-	float * tree_probs_r_pre = malloc(BATCH_SZ*map_sz_x*map_sz_y*sizeof(imgs[0]));
+	float * tree_probs_r_pre = malloc(BATCH_SZ*((map_sz_x*map_sz_y)+ 1)*sizeof(imgs[0]));
 
 	ASSERT(imgs_r_pre && tree_probs_r_pre, "failed allocating");
 
@@ -58,7 +58,7 @@ static PyObject *rotate_reflect_imgs(PyObject *self, PyObject *args){
 		int op = rand() % 4;
 		int trans = rand() % 2;
 		int gm_off = gm*map_sz_x*map_sz_y*n_chan;
-		int pgm_off = gm*map_sz_x*map_sz_y;
+		int pgm_off = gm*(map_sz_x*map_sz_y + 1);
 
 		//////////////////////////////////
 		if(op == 0){ // no transform
@@ -79,6 +79,10 @@ static PyObject *rotate_reflect_imgs(PyObject *self, PyObject *args){
 			memcpy(&imgs_r[gm_off], &imgs_r_pre[gm_off], map_sz_x*map_sz_y*n_chan*sizeof(imgs[0]));
 			memcpy(&tree_probs_r[pgm_off], &tree_probs_r_pre[pgm_off], map_sz_x*map_sz_y*sizeof(imgs[0]));
 		}
+
+		// cp no move (last entry of map)
+		int ind = pgm_off + (map_sz_x*map_sz_y);
+		tree_probs[ind] = tree_probs_r[ind];
 	}
 	
 	PyObject * ret = PyList_New(2);

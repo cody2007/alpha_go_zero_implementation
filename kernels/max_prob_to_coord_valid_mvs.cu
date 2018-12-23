@@ -2,7 +2,7 @@ __global__ void max_prob_to_coord_valid_mvs_kernel(float * prob_map, int * to_co
 		char * board, char * valid_mv_map_internal){
 	int gm = blockIdx.x;
 	int gm_offset = gm*MAP_SZ;
-	float * prob_map_cur = &prob_map[gm_offset];
+	float * prob_map_cur = &prob_map[gm*(MAP_SZ+1)];
 
 	COUNT_VALID
 

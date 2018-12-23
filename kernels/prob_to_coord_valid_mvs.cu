@@ -3,6 +3,7 @@ __global__ void prob_to_coord_valid_mvs_kernel(float * prob_map, int * to_coord,
 	int gm = blockIdx.x;
 	float * prob_map_cur = &prob_map[gm*(MAP_SZ+1)];
 
+	int gm_offset = gm*MAP_SZ;
 	COUNT_VALID
 	
 	float rand_val = (float)(curand(&rand_states[gm]) % RAND_RES);

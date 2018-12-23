@@ -210,7 +210,7 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 	FC_L2_reg *= (L2_LAMBDA/2.)
 
 	################### movement from tree statistics
-	visit_count_map = tf.placeholder(tf.float32, shape=(gv.BATCH_SZ, gv.map_szt))
+	visit_count_map = tf.placeholder(tf.float32, shape=(gv.BATCH_SZ, gv.map_szt+1))
 	
 	tree_prob_visit_coord = tf_op.prob_to_coord(visit_count_map, dir_pre, dir_a)
 	tree_det_visit_coord = tf.argmax(visit_count_map, 1, output_type=tf.int32)

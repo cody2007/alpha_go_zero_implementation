@@ -1,5 +1,10 @@
 // return probs from tree visit counts
 static PyObject *return_probs_map(PyObject *self, PyObject *args){
+	int n_turns_input;
+
+	if(!PyArg_ParseTuple(args, "i", &n_turns_input)) return NULL;
+
+	ASSERT(n_turns_input == N_TURNS, "N_TURNS (compiled constant) does not match python inputs");
 
 	///// output
 	npy_intp dims[3];
@@ -28,6 +33,8 @@ static PyObject *return_probs_map(PyObject *self, PyObject *args){
 			int TO, LO;
 
 			// inds
+			//printf("tree_sz %i gm %i tree_loc %i\n", tree_sz[gm], gm, tree_loc);
+
 			int t_ind = tree_loc; TO_FRM_T_IND
 			int l_ind = tree_list_start[TO]; LO_FRM_L_IND
 			int n_valid_mvs = tree_list_sz[TO]; CHK_N_VALID_MVS

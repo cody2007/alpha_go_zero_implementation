@@ -20,11 +20,6 @@ sdir = 'models/' # directory to save and load models
 ################################### configuration: 
 #### load previous model or start from scratch?
 save_nm = None # this results in the optimization starting from scratch (comment out line below)
-#save_nm = 'go_cpu_tree_0.200000EPS_7GMSZ_1000N_SIM_0.001000L2_LAMBDA_0.900000MOMENTUM_0.025000VAL_LAMBDA_1.000000CPUCT_20N_TURNS_128N_FILTERS_EPS0.110000_EPS0.020000_EPS0.010000.npy'
-#save_nm = 'go_cpu_tree_0.2000EPS_7GMSZ_1000N_SIM_20N_TURNS_128N_FILTERS_0.50N_TURNS_FRAC_TRAIN.npy'
-#save_nm = 'go_cpu_tree_0.2000EPS_7GMSZ_1000N_SIM_20N_TURNS_128N_FILTERS_0.50N_TURNS_FRAC_TRAIN_EPS0.020000.npy'
-#save_nm = 'go_cpu_tree_0.2000EPS_7GMSZ_1000N_SIM_20N_TURNS_128N_FILTERS_0.50N_TURNS_FRAC_TRAIN_EPS0.020000_EPS0.002000.npy'
-save_nm = 'go_cpu_tree_0.2000EPS_7GMSZ_1000N_SIM_20N_TURNS_128N_FILTERS_1.00N_TURNS_FRAC_TRAIN_7N_LAYERS.npy'
 
 ###### variables to save
 save_vars = ['LSQ_LAMBDA', 'LSQ_REG_LAMBDA', 'POL_CROSS_ENTROP_LAMBDA', 'VAL_LAMBDA', 'VALR_LAMBDA', 'L2_LAMBDA',
@@ -67,8 +62,8 @@ if save_nm is None:
 	EPS = 2e-1 # backprop step size
 	MOMENTUM = .9
 
-	N_SIM = 1000 # number of simulations at each turn
-	N_TURNS = 20 # number of moves per player per game
+	N_SIM = 10 # number of simulations at each turn
+	N_TURNS = 40 # number of moves per player per game
 
 	N_TURNS_FRAC_TRAIN = 1 #.5 # fraction of (random) turns to run bp on, remainder are discarded
 
@@ -86,7 +81,7 @@ if save_nm is None:
 	start_time = datetime.now()
 	save_t = datetime.now()
 
-	save_nm = 'go_cpu_tree_%1.4fEPS_%iGMSZ_%iN_SIM_%iN_TURNS_%iN_FILTERS_%1.2fN_TURNS_FRAC_TRAIN_%iN_LAYERS.npy' % (EPS, gv.n_rows, N_SIM, N_TURNS, N_FILTERS[0], N_TURNS_FRAC_TRAIN, N_LAYERS)
+	save_nm = 'go_%1.4fEPS_%iGMSZ_%iN_SIM_%iN_TURNS_%iN_FILTERS_%iN_LAYERS.npy' % (EPS, gv.n_rows, N_SIM, N_TURNS, N_FILTERS[0], N_LAYERS)
 
 	boards = {}; scores = {} # eval
 	save_d = {}
@@ -264,7 +259,7 @@ while True:
 	##### create prob maps
 	for player in [0,1]:
 		winner[:, player] = arch.sess.run(arch.winner, feed_dict={arch.moving_player: player})
-	tree_probs = pu.return_probs_map()
+	tree_probs = pu.return_probs_map(N_TURNS)
 
 	#############################
 	# train
