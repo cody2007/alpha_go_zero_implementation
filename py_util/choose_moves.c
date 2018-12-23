@@ -25,21 +25,18 @@ static PyObject *choose_moves(PyObject *self, PyObject *args){
 	npy_intp * dims_in = PyArray_DIMS(pol_np);
 
 	ASSERT(dims_in[0] == BATCH_SZ, "batch sz incorrect")
-	ASSERT(dims_in[1] == (MAP_SZ_X*MAP_SZ_Y), "map sz incorrect")
+	ASSERT(dims_in[1] == ((MAP_SZ_X*MAP_SZ_Y) + 1), "map sz incorrect")
 
 	pol = (float*) PyArray_DATA((PyArrayObject*) pol_np);
 
 	///// output
 	npy_intp dims[4];
 	dims[0] = BATCH_SZ;
-	dims[1] = MAP_SZ_X;
-	dims[2] = MAP_SZ_Y;
+	dims[1] = (MAP_SZ_X*MAP_SZ_X) + 1;
 
 	PyObject * to_coords_np = PyArray_SimpleNew(1, dims, NPY_INT32);
-	PyObject * Q_map_np = PyArray_SimpleNew(3, dims, NPY_FLOAT32);
-	PyObject * P_map_np = PyArray_SimpleNew(3, dims, NPY_FLOAT32);
-
-	dims[1] = MAP_SZ_X*MAP_SZ_Y;
+	PyObject * Q_map_np = PyArray_SimpleNew(2, dims, NPY_FLOAT32);
+	PyObject * P_map_np = PyArray_SimpleNew(2, dims, NPY_FLOAT32);
 	PyObject * visit_count_map_np = PyArray_SimpleNew(2, dims, NPY_FLOAT32);
 
 	int * to_coords = (int *) PyArray_DATA((PyArrayObject*) to_coords_np);
@@ -52,7 +49,7 @@ static PyObject *choose_moves(PyObject *self, PyObject *args){
 
 		////// init
 		MAP_LOOP{
-			int MO = gm*MAP_SZ + loc;
+			int MO = gm*(MAP_SZ+1) + loc;
 			P_map[MO] = 0;
 			Q_map[MO] = 0;
 			visit_count_map[MO] = 0;
@@ -62,26 +59,27 @@ static PyObject *choose_moves(PyObject *self, PyObject *args){
 
 		// pass move only valid move
 		if(n_valid_mvs == 1){
-			to_coords[gm] = -1;
+			to_coords[gm] = MAP_SZ;
 			continue;
 		}
 
+		// first move in the list is -1, the pass move, which is the last space in the maps (pol, P_map, Q_map)
 		#define LOC_AND_MO int LOC = LO + mv_ind;\
 				int map_loc = list_valid_mv_inds[LOC];\
-				DASSERT(map_loc >= 0 && map_loc < MAP_SZ);\
-				int MO = gm*MAP_SZ + map_loc;
+				DASSERT(map_loc >= 0 && map_loc <= MAP_SZ);\
+				int MO = gm*(MAP_SZ+1) + map_loc;
 
 		/////////// sum all valid probs
 		float prob_sum = 0;
-		for(int mv_ind = 1; mv_ind < n_valid_mvs; mv_ind++){ // skip pass move
+		for(int mv_ind = 0; mv_ind < n_valid_mvs; mv_ind++){
 			LOC_AND_MO
 			prob_sum += pol[MO];
 		}
-
+		
 		//////////// set prob value, compute tmp sums of Q & P
 		int visit_sum = 0; // across mvs
 
-		for(int mv_ind = 1; mv_ind < n_valid_mvs; mv_ind++){ // skip pass move
+		for(int mv_ind = 0; mv_ind < n_valid_mvs; mv_ind++){
 			LOC_AND_MO
 			
 			// init move prob
@@ -104,7 +102,7 @@ static PyObject *choose_moves(PyObject *self, PyObject *args){
 		float U_max = 0;
 		int mv_ind_max = -1;
 		float visit_sum_sqrt = sqrtf(visit_sum);
-		for(int mv_ind = 1; mv_ind < n_valid_mvs; mv_ind++){ // skip pass move
+		for(int mv_ind = 0; mv_ind < n_valid_mvs; mv_ind++){
 			LOC_AND_MO
 			P_map[MO] *= visit_sum_sqrt;
 
@@ -118,7 +116,7 @@ static PyObject *choose_moves(PyObject *self, PyObject *args){
 		// set to_coords
 		int LOC = LO + mv_ind_max;
 		int map_loc = list_valid_mv_inds[LOC];
-		DASSERT(map_loc >= 0 && map_loc < MAP_SZ);
+		DASSERT(map_loc >= 0 && map_loc <= MAP_SZ);
 		to_coords[gm] = map_loc;
 
 	} // gm

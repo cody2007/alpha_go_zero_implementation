@@ -46,7 +46,7 @@ static PyObject *prune_tree(PyObject *self, PyObject *args){
 		}
 
 		for(int i = LOFF; i < (LOFF + MV_BUFFER_SZ); i++){
-			list_valid_mv_inds[i] = -1;
+			list_valid_mv_inds[i] = MAP_SZ;
 			list_valid_tree_inds[i] = -1;
 			list_prob[i] = -1;
 		}

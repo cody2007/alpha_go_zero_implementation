@@ -19,9 +19,12 @@ sdir = 'models/' # directory to save and load models
 
 ################################### configuration: 
 #### load previous model or start from scratch?
-#save_nm = None # this results in the optimization starting from scratch (comment out line below)
+save_nm = None # this results in the optimization starting from scratch (comment out line below)
 #save_nm = 'go_cpu_tree_0.200000EPS_7GMSZ_1000N_SIM_0.001000L2_LAMBDA_0.900000MOMENTUM_0.025000VAL_LAMBDA_1.000000CPUCT_20N_TURNS_128N_FILTERS_EPS0.110000_EPS0.020000_EPS0.010000.npy'
-save_nm = 'go_cpu_tree_0.2000EPS_7GMSZ_1000N_SIM_20N_TURNS_128N_FILTERS_0.50N_TURNS_FRAC_TRAIN.npy'
+#save_nm = 'go_cpu_tree_0.2000EPS_7GMSZ_1000N_SIM_20N_TURNS_128N_FILTERS_0.50N_TURNS_FRAC_TRAIN.npy'
+#save_nm = 'go_cpu_tree_0.2000EPS_7GMSZ_1000N_SIM_20N_TURNS_128N_FILTERS_0.50N_TURNS_FRAC_TRAIN_EPS0.020000.npy'
+#save_nm = 'go_cpu_tree_0.2000EPS_7GMSZ_1000N_SIM_20N_TURNS_128N_FILTERS_0.50N_TURNS_FRAC_TRAIN_EPS0.020000_EPS0.002000.npy'
+save_nm = 'go_cpu_tree_0.2000EPS_7GMSZ_1000N_SIM_20N_TURNS_128N_FILTERS_1.00N_TURNS_FRAC_TRAIN_7N_LAYERS.npy'
 
 ###### variables to save
 save_vars = ['LSQ_LAMBDA', 'LSQ_REG_LAMBDA', 'POL_CROSS_ENTROP_LAMBDA', 'VAL_LAMBDA', 'VALR_LAMBDA', 'L2_LAMBDA',
@@ -53,7 +56,7 @@ if save_nm is None:
 	CPUCT = 1
 
 	##### model parameters
-	N_LAYERS = 5 # number of model layers
+	N_LAYERS = 7 #5 # number of model layers
 	FILTER_SZS = [3]*N_LAYERS
 	STRIDES = [1]*N_LAYERS
 	F = 128 # number of filters
@@ -67,7 +70,7 @@ if save_nm is None:
 	N_SIM = 1000 # number of simulations at each turn
 	N_TURNS = 20 # number of moves per player per game
 
-	N_TURNS_FRAC_TRAIN = .5 # fraction of (random) turns to run bp on, remainder are discarded
+	N_TURNS_FRAC_TRAIN = 1 #.5 # fraction of (random) turns to run bp on, remainder are discarded
 
 	##### number of batch evaluations for testing model
 	N_EVAL_NN_GMS = 1 # model evaluation for printing
@@ -83,7 +86,7 @@ if save_nm is None:
 	start_time = datetime.now()
 	save_t = datetime.now()
 
-	save_nm = 'go_cpu_tree_%1.4fEPS_%iGMSZ_%iN_SIM_%iN_TURNS_%iN_FILTERS_%1.2fN_TURNS_FRAC_TRAIN.npy' % (EPS, gv.n_rows, N_SIM, N_TURNS, N_FILTERS[0], N_TURNS_FRAC_TRAIN)
+	save_nm = 'go_cpu_tree_%1.4fEPS_%iGMSZ_%iN_SIM_%iN_TURNS_%iN_FILTERS_%1.2fN_TURNS_FRAC_TRAIN_%iN_LAYERS.npy' % (EPS, gv.n_rows, N_SIM, N_TURNS, N_FILTERS[0], N_TURNS_FRAC_TRAIN, N_LAYERS)
 
 	boards = {}; scores = {} # eval
 	save_d = {}
@@ -110,6 +113,7 @@ else:
 		exec('%s = save_d["%s"]' % (key,key))
 
 	EPS_ORIG = EPS
+	#EPS = 2e-3
 	#EPS = 5e-3
 
 	save_nm_orig = save_nm

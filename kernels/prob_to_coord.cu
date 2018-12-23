@@ -5,7 +5,7 @@
 __global__ void prob_to_coord_kernel(float * prob_map, int * to_coord,
 		curandState_t* rand_states, float * dir_pre, float * dir_a){
 	int gm = blockIdx.x;
-	int MO = gm*MAP_SZ;
+	int MO = gm*(MAP_SZ+1);
 	float rand_val = (float)(curand(&rand_states[gm]) % RAND_RES);
 	rand_val /= (float)RAND_RES;
 
@@ -43,13 +43,16 @@ __global__ void prob_to_coord_kernel(float * prob_map, int * to_coord,
 		//DASSERT(PROB >= 0 && PROB <= 1)
 
 		if((rand_val >= probs_sum) && (rand_val < (probs_sum + PROB))){
-			to_coord[gm] = loc;
+			if(loc < MAP_SZ)
+				to_coord[gm] = loc;
+			else
+				to_coord[gm] = -1;
 			return;
 		}
 		probs_sum += PROB;
 	}
 
-	to_coord[gm] = MAP_SZ - 1;
+	to_coord[gm] = -1;
 
 	DASSERT(probs_sum <= 1.01)
 	DASSERT(probs_sum >= .999)

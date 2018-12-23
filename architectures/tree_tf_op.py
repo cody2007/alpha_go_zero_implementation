@@ -92,7 +92,7 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 	move_frm_inputs = tf_op.move_unit(to_coords_input, moving_player)
 
 	####
-        pol_target = tf.placeholder(tf.float32, shape=[gv.BATCH_SZ, map_prod])
+        pol_target = tf.placeholder(tf.float32, shape=[gv.BATCH_SZ, map_prod+1])
         val_target = tf.placeholder(tf.float32, shape=[gv.BATCH_SZ])
         
         convs = []; weights = []; outputs = []; output_nms = []
@@ -139,8 +139,8 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 	output_nms += ['oFC1p']
 
 	# FC layer
-	wFC2p = tf.Variable(tf.random_normal([N_FC1, map_prod], stddev=WEIGHT_STD), name='wFC2')
-	bFC2p = tf.Variable(tf.random_normal([map_prod], mean=WEIGHT_STD*2, stddev=WEIGHT_STD), name='bFC2')
+	wFC2p = tf.Variable(tf.random_normal([N_FC1, map_prod+1], stddev=WEIGHT_STD), name='wFC2')
+	bFC2p = tf.Variable(tf.random_normal([map_prod+1], mean=WEIGHT_STD*2, stddev=WEIGHT_STD), name='bFC2')
 	
 	pol_pre = tf.nn.relu(tf.matmul(oFC1p, wFC2p) + bFC2p)
 

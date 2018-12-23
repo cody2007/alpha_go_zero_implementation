@@ -44,7 +44,7 @@ static PyObject *add_valid_mvs(PyObject *self, PyObject *args){
 				list_sz[gm] ++;\
 				assert(list_sz[gm] < MV_BUFFER_SZ); }
 		
-		ADD_MV(-1) // pass move entry
+		ADD_MV(MAP_SZ) // pass move entry
 		
 		for(int map_coord = 0; map_coord < MAP_SZ; map_coord++){
 			int gcoord = game_offset + map_coord;

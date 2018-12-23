@@ -4,7 +4,7 @@ static PyObject *return_probs_map(PyObject *self, PyObject *args){
 	///// output
 	npy_intp dims[3];
 	dims[0] = N_TURNS * N_PLAYERS * BATCH_SZ;
-	dims[1] = MAP_SZ_X * MAP_SZ_Y;
+	dims[1] = (MAP_SZ_X * MAP_SZ_Y) + 1;
 
 	PyObject * probs_map_np = PyArray_SimpleNew(2, dims, NPY_FLOAT);
 
@@ -21,7 +21,7 @@ static PyObject *return_probs_map(PyObject *self, PyObject *args){
 
 		// traverse tree backward, alternating players
 		for(int turn = N_TURNS-1; turn >= 0; turn--)   for(char player = 1; player >= 0; player--){
-			float * probs_map_cur = &probs_map[turn*N_PLAYERS*BATCH_SZ*MAP_SZ + player*BATCH_SZ*MAP_SZ + gm*MAP_SZ];
+			float * probs_map_cur = &probs_map[turn*N_PLAYERS*BATCH_SZ*(MAP_SZ+1) + player*BATCH_SZ*(MAP_SZ+1) + gm*(MAP_SZ+1)];
 
 			// init
 			MAP_LOOP probs_map_cur[loc] = 0;

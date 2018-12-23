@@ -15,8 +15,8 @@ import py_util.py_util as pu
 save_nm = 'models/go_cpu_tree_0.200000EPS_7GMSZ_1000N_SIM_0.001000L2_LAMBDA_0.900000MOMENTUM_0.025000VAL_LAMBDA_1.000000CPUCT_20N_TURNS_128N_FILTERS_EPS0.110000_EPS0.020000_EPS0.010000.npy'
 # ^ set save_nm = None if you want to start training a new model
 
-#run_net = True # run only the network (no tree search)
-run_net = False # make moves from the tree search
+run_net = True # run only the network (no tree search)
+#run_net = False # make moves from the tree search
 
 show_txt = False # don't show statistics of each move (Q and P values, visit counts)
 #show_txt = True
@@ -82,6 +82,9 @@ def nn_mv():
 	pu.session_backup()
 
 	if run_net:
+		valid_mv_map, val = arch.sess.run([arch.valid_mv_map, arch.val], feed_dict=ret_d(0)) ## dbg
+		print 'val', val[0]
+
 		if turn == 0:	
 			arch.sess.run(arch.nn_prob_move_unit_valid_mvs, feed_dict=ret_d(0))
 		else:
@@ -100,7 +103,7 @@ def nn_mv():
 
 				arch.sess.run(arch.move_frm_inputs, feed_dict={arch.moving_player: player, arch.to_coords_input: to_coords})
 			# backup then make next move
-			for turn_sim in range(turn, N_TURNS):
+			for turn_sim in range(turn, turn+N_TURNS):
 				for player in [0,1]:
 					valid_mv_map, pol, val = arch.sess.run([arch.valid_mv_map, arch.pol, arch.val], feed_dict=ret_d(player))
 
@@ -272,7 +275,8 @@ while True:
 	
 		board_prev = arch.sess.run(arch.gm_vars['board'])[0]
 
-		imgs = arch.sess.run(arch.imgs, feed_dict={arch.moving_player: 1})
+		imgs, val = arch.sess.run([arch.imgs, arch.val], feed_dict={arch.moving_player: 1})
+		print 'hval', val[0]
 		arch.sess.run(arch.nn_max_move_unit, feed_dict={arch.moving_player: 1, arch.nn_max_to_coords: to_coords})
 
 		board = arch.sess.run(arch.gm_vars['board'])[0]

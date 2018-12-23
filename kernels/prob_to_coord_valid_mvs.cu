@@ -1,8 +1,7 @@
 __global__ void prob_to_coord_valid_mvs_kernel(float * prob_map, int * to_coord, 
 		char * board, curandState_t* rand_states, char * valid_mv_map_internal){
 	int gm = blockIdx.x;
-	int gm_offset = gm*MAP_SZ;
-	float * prob_map_cur = &prob_map[gm_offset];
+	float * prob_map_cur = &prob_map[gm*(MAP_SZ+1)];
 
 	COUNT_VALID
 	
@@ -11,17 +10,18 @@ __global__ void prob_to_coord_valid_mvs_kernel(float * prob_map, int * to_coord,
 
 	// compute probs sum over valid mvs
 	float probs_sum_orig = 0;
-	for(int mv_ind = 1; mv_ind < n_valid_mvs; mv_ind++){ // skip pass move
+	for(int mv_ind = 0; mv_ind < n_valid_mvs; mv_ind++){
 		int map_loc = valid_mv_inds[mv_ind];
-		CHK_VALID_MAP_COORD(map_loc)
-		DASSERT(board[gm*MAP_SZ + map_loc] == 0)
+		CHK_VALID_MV_MAP_COORD(map_loc)
+		DASSERT(map_loc == -1 || board[gm*MAP_SZ + map_loc] == 0)
+		if(map_loc == -1) map_loc = MAP_SZ+1;\
 		probs_sum_orig += prob_map_cur[map_loc];
 	}
 	if(probs_sum_orig == 0) probs_sum_orig = 1;
 	//assert(probs_sum_orig >= 0);
 	
 	float probs_sum = 0;
-	for(int mv_ind = 1; mv_ind < n_valid_mvs; mv_ind++){ // skip pass move
+	for(int mv_ind = 0; mv_ind < n_valid_mvs; mv_ind++){
 		int map_loc = valid_mv_inds[mv_ind];
 		float p = prob_map_cur[map_loc] / probs_sum_orig;
 		//if(!(p >= 0 && p <= 1))
