@@ -24,7 +24,7 @@ save_nm = None # this results in the optimization starting from scratch (comment
 ###### variables to save
 save_vars = ['LSQ_LAMBDA', 'LSQ_REG_LAMBDA', 'POL_CROSS_ENTROP_LAMBDA', 'VAL_LAMBDA', 'VALR_LAMBDA', 'L2_LAMBDA',
 	'FILTER_SZS', 'STRIDES', 'N_FILTERS', 'N_FC1', 'EPS', 'MOMENTUM', 'SAVE_FREQ', 'N_SIM', 'N_TURNS', 'CPUCT', 'N_TURNS_FRAC_TRAIN',
-	'N_EVAL_NN_GMS', 'N_EVAL_NN_GNU_GMS', 'N_EVAL_TREE_GMS', 'N_EVAL_TREE_GNU_GMS', 'CHKP_FREQ',
+	'N_EVAL_NN_GMS', 'N_EVAL_NN_GNU_GMS', 'N_EVAL_TREE_GMS', 'N_EVAL_TREE_GNU_GMS', 'CHKP_FREQ', 'N_BATCH_SETS',
 	'save_nm', 'DIR_A', 'start_time', 'EVAL_FREQ', 'boards', 'scores']
 logs = ['val_mean_sq_err', 'pol_cross_entrop', 'pol_max_pre', 'pol_max', 'val_pearsonr','opt_batch','eval_batch']
 print_logs = ['val_mean_sq_err', 'pol_cross_entrop', 'pol_max', 'val_pearsonr']
@@ -49,6 +49,7 @@ if save_nm is None:
 	L2_LAMBDA = 1e-3 # weight regularization 
 	DIR_A = 0
 	CPUCT = 1
+	N_BATCH_SETS = 10
 
 	##### model parameters
 	N_LAYERS = 5 # number of model layers
@@ -59,10 +60,10 @@ if save_nm is None:
 	N_FC1 = 128 # number of units in fully connected layer
 	
 	
-	EPS = 0#2e-1 # backprop step size
+	EPS = 2e-1 # backprop step size
 	MOMENTUM = .9
 
-	N_SIM = 10 # number of simulations at each turn
+	N_SIM = 200#5#10 # number of simulations at each turn
 	N_TURNS = 40 # number of moves per player per game
 
 	N_TURNS_FRAC_TRAIN = 1 #.5 # fraction of (random) turns to run bp on, remainder are discarded
@@ -81,7 +82,7 @@ if save_nm is None:
 	start_time = datetime.now()
 	save_t = datetime.now()
 
-	save_nm = 'go_%1.4fEPS_%iGMSZ_%iN_SIM_%iN_TURNS_%iN_FILTERS_%iN_LAYERS.npy' % (EPS, gv.n_rows, N_SIM, N_TURNS, N_FILTERS[0], N_LAYERS)
+	save_nm = 'go_%1.4fEPS_%iGMSZ_%iN_SIM_%iN_TURNS_%iN_FILTERS_%iN_LAYERS_%iN_BATCH_SETS.npy' % (EPS, gv.n_rows, N_SIM, N_TURNS, N_FILTERS[0], N_LAYERS, N_BATCH_SETS)
 
 	boards = {}; scores = {} # eval
 	save_d = {}
@@ -203,16 +204,19 @@ dir_pre = 0
 #else:
 #	dir_pre = gamma(DIR_A * gv.map_szt) / (gamma(DIR_A)**gv.map_szt)
 
-BUFFER_SZ = gv.BATCH_SZ * N_TURNS * 2
+BUFFER_SZ = N_BATCH_SETS * gv.BATCH_SZ * N_TURNS * 2
 board = np.zeros((BUFFER_SZ, gv.n_rows, gv.n_cols, gv.n_input_channels),  dtype='single')
-winner = np.zeros((N_TURNS, 2, gv.BATCH_SZ), dtype='single')
+winner = np.zeros((N_BATCH_SETS, N_TURNS, 2, gv.BATCH_SZ), dtype='single')
+tree_probs = np.zeros((N_BATCH_SETS, BUFFER_SZ/N_BATCH_SETS, gv.map_szt+1), dtype='single')
+
 inds_total = np.arange(BUFFER_SZ)
 
 err_denom = 0
 val_mean_sq_err = 0; pol_cross_entrop_err = 0; val_pearsonr = 0
 
 buffer_loc = 0
-init_buffers = 0
+batch_set = 0
+batch_sets_created = 0
 t_start = datetime.now()
 run_time = datetime.now() - datetime.now()
 
@@ -223,43 +227,50 @@ sv()
 
 ######################################### training loop:
 while True:
-	######### generate batches
-	buffer_loc = 0
+	while batch_sets_created < N_BATCH_SETS:
+		######### generate batches
+		if buffer_loc >= BUFFER_SZ:
+			buffer_loc = 0
+			batch_set = 0
 
-	arch.sess.run(arch.init_state)
-	pu.init_tree()
-	turn_start_t = time.time()
-	for turn in range(N_TURNS):
-		run_sim(turn)
-		
-		### make move
+		arch.sess.run(arch.init_state)
+		pu.init_tree()
+		turn_start_t = time.time()
+		for turn in range(N_TURNS):
+			run_sim(turn)
+			
+			### make move
+			for player in [0,1]:
+				inds = buffer_loc + np.arange(gv.BATCH_SZ)
+				board[inds], valid_mv_map, pol = arch.sess.run([arch.imgs, arch.valid_mv_map, arch.pol], feed_dict = ret_d(player)) # generate batch and valid moves
+				
+				#########
+				pu.add_valid_mvs(player, valid_mv_map) # register valid moves in tree
+				visit_count_map = pu.choose_moves(player, pol, CPUCT)[-1] # get number of times each node was visited
+				
+				to_coords = arch.sess.run([arch.tree_prob_visit_coord, arch.tree_prob_move_unit], feed_dict={arch.moving_player: player, 
+					arch.visit_count_map: visit_count_map, arch.dir_pre: dir_pre, arch.dir_a: DIR_A})[0] # make move in proportion to visit counts
+
+				pu.register_mv(player, to_coords) # register move in tree
+
+				###############
+				
+				buffer_loc += gv.BATCH_SZ
+
+			pu.prune_tree()
+			
+			if (turn+1) % 2 == 0:
+				print 'finished turn %i, %i secs (%i)' % (turn, time.time() - turn_start_t, batch_sets_created)
+				
+		##### create prob maps
 		for player in [0,1]:
-			inds = buffer_loc + np.arange(gv.BATCH_SZ)
-			board[inds], valid_mv_map, pol = arch.sess.run([arch.imgs, arch.valid_mv_map, arch.pol], feed_dict = ret_d(player)) # generate batch and valid moves
-			
-			#########
-			pu.add_valid_mvs(player, valid_mv_map) # register valid moves in tree
-			visit_count_map = pu.choose_moves(player, pol, CPUCT)[-1] # get number of times each node was visited
-			
-			to_coords = arch.sess.run([arch.tree_prob_visit_coord, arch.tree_prob_move_unit], feed_dict={arch.moving_player: player, 
-				arch.visit_count_map: visit_count_map, arch.dir_pre: dir_pre, arch.dir_a: DIR_A})[0] # make move in proportion to visit counts
-
-			pu.register_mv(player, to_coords) # register move in tree
-
-			###############
-			
-			buffer_loc += gv.BATCH_SZ
-
-		pu.prune_tree()
+			winner[batch_set, :, player] = arch.sess.run(arch.winner, feed_dict={arch.moving_player: player})
+		tree_probs[batch_set] = pu.return_probs_map(N_TURNS)
 		
-		if (turn+1) % 2 == 0:
-			print 'finished turn', turn, time.time() - turn_start_t
-			
+		batch_set += 1
+		batch_sets_created += 1
 
-	##### create prob maps
-	for player in [0,1]:
-		winner[:, player] = arch.sess.run(arch.winner, feed_dict={arch.moving_player: player})
-	tree_probs = pu.return_probs_map(N_TURNS)
+	batch_sets_created -= 1
 
 	#############################
 	# train
@@ -267,7 +278,7 @@ while True:
 	for batch in range(np.int(N_TURNS_FRAC_TRAIN*N_TURNS)):
 		inds = inds_total[batch*gv.BATCH_SZ + np.arange(gv.BATCH_SZ)]
 		
-		board2, tree_probs2 = pu.rotate_reflect_imgs(board[inds], tree_probs[inds]) # rotate and reflect board randomly
+		board2, tree_probs2 = pu.rotate_reflect_imgs(board[inds], tree_probs.reshape((BUFFER_SZ, gv.map_szt+1))[inds]) # rotate and reflect board randomly
 
 		train_dict = {arch.imgs: board2,
 				arch.pol_target: tree_probs2,
