@@ -62,7 +62,7 @@ def move_nn(to_coords, moving_player=0):
 		f[gm].stdin.write(cmd)
 
 def move_ai(moving_player=1):
-	ai_to_coords = -np.ones(gv.BATCH_SZ, dtype='int32')
+	ai_to_coords = gv.map_szt * np.ones(gv.BATCH_SZ, dtype='int32')
 
 	for gm in range(gv.BATCH_SZ):
 		while True:

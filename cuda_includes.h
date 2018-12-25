@@ -45,13 +45,13 @@ char * moved_internal; // [BATCH_SZ] used in move_random_ai, req. input to move_
 
 // count valid mvs and store n_valid_mvs
 #define COUNT_VALID \
-	int n_valid_mvs = 0;\
-	int valid_mv_inds[MAP_SZ];\
+	int n_valid_mvs = 1;\
+	int valid_mv_inds[MAP_SZ+1];\
+	valid_mv_inds[0] = MAP_SZ;\
 	MAP_LOOP{\
 		if(valid_mv_map_internal[gm_offset + loc]){\
 			valid_mv_inds[n_valid_mvs] = loc;\
 			n_valid_mvs ++;\
 		}\
-	}\
-	if(!n_valid_mvs) return; // no valid mvs
+	}
 

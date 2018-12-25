@@ -1,3 +1,6 @@
+notebooks/*
+notebooks/training_visualizations.ipynb
+models/*
 *.prof
 p.py
 *.o

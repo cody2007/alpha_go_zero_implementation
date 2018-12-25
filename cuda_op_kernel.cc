@@ -10,7 +10,7 @@ using namespace tensorflow;
 
 // return coordinate from probability map, proportionate to probabiltiies
 REGISTER_OP("ProbToCoord")
-	.Input("prob_map: float") // [BATCH_SZ, MAP_SZ]
+	.Input("prob_map: float") // [BATCH_SZ, MAP_SZ+1]
 	.Input("dir_pre: float")
 	.Input("dir_a: float")
 	.Output("to_coord: int32");

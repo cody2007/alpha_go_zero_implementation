@@ -10,7 +10,8 @@ __global__ void move_random_ai_kernel(int * ai_to_coord, char * board, curandSta
 	
 	ai_to_coord[gm] = valid_mv_inds[rand_ind];
 
-	DASSERT(ai_to_coord[gm] >= 0 && ai_to_coord[gm] < MAP_SZ && board[gm_offset + ai_to_coord[gm]] == 0)
+	DASSERT(ai_to_coord[gm] >= 0 && ai_to_coord[gm] <= MAP_SZ)
+	DASSERT(ai_to_coord[gm] == MAP_SZ || board[gm_offset + ai_to_coord[gm]] == 0)
 
 }
 

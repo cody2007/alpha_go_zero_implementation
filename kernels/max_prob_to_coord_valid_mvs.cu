@@ -8,7 +8,9 @@ __global__ void max_prob_to_coord_valid_mvs_kernel(float * prob_map, int * to_co
 
 	// determine max prob
 	float max_prob = -999;
-	int max_map_loc;
+	int max_map_loc = MAP_SZ+1;
+	DASSERT(n_valid_mvs > 0);
+
 	for(int mv_ind = 0; mv_ind < n_valid_mvs; mv_ind++){ // skip pass move
 		int map_loc = valid_mv_inds[mv_ind];
 		CHK_VALID_MV_MAP_COORD(map_loc)
@@ -20,6 +22,8 @@ __global__ void max_prob_to_coord_valid_mvs_kernel(float * prob_map, int * to_co
 	}
 
 	to_coord[gm] = max_map_loc;
+	//printf("to_coord[%i] %i n_valid_mvs %i max_map_loc %i max_prob %f\n", gm, to_coord[gm],
+	//	n_valid_mvs, max_map_loc, max_prob);
 }
 
 void max_prob_to_coord_valid_mvs_launcher(float * prob_map, int * to_coord){

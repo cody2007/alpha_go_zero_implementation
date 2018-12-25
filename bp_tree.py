@@ -59,7 +59,7 @@ if save_nm is None:
 	N_FC1 = 128 # number of units in fully connected layer
 	
 	
-	EPS = 2e-1 # backprop step size
+	EPS = 0#2e-1 # backprop step size
 	MOMENTUM = .9
 
 	N_SIM = 10 # number of simulations at each turn
