@@ -25,7 +25,7 @@ save_nm = None # this results in the optimization starting from scratch (comment
 save_vars = ['LSQ_LAMBDA', 'LSQ_REG_LAMBDA', 'POL_CROSS_ENTROP_LAMBDA', 'VAL_LAMBDA', 'VALR_LAMBDA', 'L2_LAMBDA',
 	'FILTER_SZS', 'STRIDES', 'N_FILTERS', 'N_FC1', 'EPS', 'MOMENTUM', 'SAVE_FREQ', 'N_SIM', 'N_TURNS', 'CPUCT', 'N_TURNS_FRAC_TRAIN',
 	'N_EVAL_NN_GMS', 'N_EVAL_NN_GNU_GMS', 'N_EVAL_TREE_GMS', 'N_EVAL_TREE_GNU_GMS', 'CHKP_FREQ', 'N_BATCH_SETS',
-	'save_nm', 'DIR_A', 'start_time', 'EVAL_FREQ', 'boards', 'scores']
+	'save_nm', 'DIR_A', 'start_time', 'EVAL_FREQ', 'boards', 'scores', 'batch_set', 'batch_sets_created']
 training_ex_vars = ['board', 'winner', 'tree_probs']
 
 logs = ['val_mean_sq_err', 'pol_cross_entrop', 'pol_max_pre', 'pol_max', 'val_pearsonr','opt_batch','eval_batch']
@@ -51,7 +51,10 @@ if save_nm is None:
 	L2_LAMBDA = 1e-3 # weight regularization 
 	DIR_A = 0
 	CPUCT = 1
-	N_BATCH_SETS = 2
+	N_BATCH_SETS = 10
+
+	batch_set = 0
+	batch_sets_created = 0
 
 	##### model parameters
 	N_LAYERS = 5 # number of model layers
@@ -65,7 +68,7 @@ if save_nm is None:
 	EPS = 2e-1 # backprop step size
 	MOMENTUM = .9
 
-	N_SIM = 5#200#5#10 # number of simulations at each turn
+	N_SIM = 150 #100#200#5#10 # number of simulations at each turn
 	N_TURNS = 40 # number of moves per player per game
 
 	N_TURNS_FRAC_TRAIN = 1 #.5 # fraction of (random) turns to run bp on, remainder are discarded
@@ -97,6 +100,7 @@ if save_nm is None:
 	global_batch_evald = 0
 	save_counter = 0
 
+	
 	log = {}
 	for key in logs:
 		log[key] = []
@@ -215,10 +219,8 @@ inds_total = np.arange(BUFFER_SZ)
 
 err_denom = 0
 val_mean_sq_err = 0; pol_cross_entrop_err = 0; val_pearsonr = 0
-
 buffer_loc = 0
-batch_set = 0
-batch_sets_created = 0
+
 t_start = datetime.now()
 run_time = datetime.now() - datetime.now()
 
@@ -273,7 +275,6 @@ while True:
 		batch_sets_created += 1
 
 	batch_sets_created -= 1
-	assert False
 
 	#############################
 	# train

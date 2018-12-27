@@ -1,4 +1,4 @@
-#define CUDA_DEBUG 1
+//#define CUDA_DEBUG 1
 
 #define PANIC(A) { printf(A " %s:%i\n", __FILE__,__LINE__); exit(1); }
 #define ASSERT(S, A) { if(!(S)) PANIC(A) }

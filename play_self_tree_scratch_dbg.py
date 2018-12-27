@@ -65,7 +65,7 @@ if save_nm is None:
 	EPS = 2e-1 # backprop step size
 	MOMENTUM = .9
 
-	N_SIM = 5#200#5#10 # number of simulations at each turn
+	N_SIM = 100 #200#5#10 # number of simulations at each turn
 	N_TURNS = 40 # number of moves per player per game
 
 	N_TURNS_FRAC_TRAIN = 1 #.5 # fraction of (random) turns to run bp on, remainder are discarded
@@ -227,74 +227,45 @@ print '------------- saving to ', save_nm
 sv()
 
 
-######################################### training loop:
-while True:
-	while batch_sets_created < N_BATCH_SETS:
-		######### generate batches
-		if buffer_loc >= BUFFER_SZ:
-			buffer_loc = 0
-			batch_set = 0
+######### generate batches
+if buffer_loc >= BUFFER_SZ:
+	buffer_loc = 0
+	batch_set = 0
 
-		arch.sess.run(arch.init_state)
-		pu.init_tree()
-		turn_start_t = time.time()
-		for turn in range(N_TURNS):
-			run_sim(turn)
-			
-			### make move
-			for player in [0,1]:
-				inds = buffer_loc + np.arange(gv.BATCH_SZ)
-				board[inds], valid_mv_map, pol = arch.sess.run([arch.imgs, arch.valid_mv_map, arch.pol], feed_dict = ret_d(player)) # generate batch and valid moves
-				
-				#########
-				pu.add_valid_mvs(player, valid_mv_map) # register valid moves in tree
-				visit_count_map = pu.choose_moves(player, pol, CPUCT)[-1] # get number of times each node was visited
-				
-				to_coords = arch.sess.run([arch.tree_prob_visit_coord, arch.tree_prob_move_unit], feed_dict={arch.moving_player: player, 
-					arch.visit_count_map: visit_count_map, arch.dir_pre: dir_pre, arch.dir_a: DIR_A})[0] # make move in proportion to visit counts
-
-				pu.register_mv(player, to_coords) # register move in tree
-
-				###############
-				
-				buffer_loc += gv.BATCH_SZ
-
-			pu.prune_tree()
-			
-			if (turn+1) % 2 == 0:
-				print 'finished turn %i, %i secs (%i)' % (turn, time.time() - turn_start_t, batch_sets_created)
-				
-		##### create prob maps
-		for player in [0,1]:
-			winner[batch_set, :, player] = arch.sess.run(arch.winner, feed_dict={arch.moving_player: player})
-		tree_probs[batch_set] = pu.return_probs_map(N_TURNS)
-		
-		batch_set += 1
-		batch_sets_created += 1
-
-	batch_sets_created -= 1
-	assert False
-
-	#############################
-	# train
-	random.shuffle(inds_total)
-	for batch in range(np.int(N_TURNS_FRAC_TRAIN*N_TURNS)):
-		inds = inds_total[batch*gv.BATCH_SZ + np.arange(gv.BATCH_SZ)]
-		
-		board2, tree_probs2 = pu.rotate_reflect_imgs(board[inds], tree_probs.reshape((BUFFER_SZ, gv.map_szt+1))[inds]) # rotate and reflect board randomly
-
-		train_dict = {arch.imgs: board2,
-				arch.pol_target: tree_probs2,
-				arch.val_target: winner.ravel()[inds]}
-
-		val_mean_sq_err_tmp, pol_cross_entrop_err_tmp, val_pearsonr_tmp = arch.sess.run(bp_eval_nodes, feed_dict=train_dict)[1:]
-
-		# update logs
-		val_mean_sq_err += val_mean_sq_err_tmp
-		pol_cross_entrop_err += pol_cross_entrop_err_tmp
-		val_pearsonr += val_pearsonr_tmp
-		global_batch += 1
-		err_denom += 1
-
+arch.sess.run(arch.init_state)
+pu.init_tree()
+turn_start_t = time.time()
+for turn in range(N_TURNS):
+	run_sim(turn)
 	
+	### make move
+	for player in [0,1]:
+		inds = buffer_loc + np.arange(gv.BATCH_SZ)
+		board[inds], valid_mv_map, pol = arch.sess.run([arch.imgs, arch.valid_mv_map, arch.pol], feed_dict = ret_d(player)) # generate batch and valid moves
+		
+		#########
+		pu.add_valid_mvs(player, valid_mv_map) # register valid moves in tree
+		visit_count_map = pu.choose_moves(player, pol, CPUCT)[-1] # get number of times each node was visited
+		
+		to_coords = arch.sess.run([arch.tree_prob_visit_coord, arch.tree_prob_move_unit], feed_dict={arch.moving_player: player, 
+			arch.visit_count_map: visit_count_map, arch.dir_pre: dir_pre, arch.dir_a: DIR_A})[0] # make move in proportion to visit counts
+
+		pu.register_mv(player, to_coords) # register move in tree
+		###############
 	
+		assert False
+
+		buffer_loc += gv.BATCH_SZ
+	if turn == 0:
+		assert False
+	pu.prune_tree()
+	
+	if (turn+1) % 2 == 0:
+		print 'finished turn %i, %i secs (%i)' % (turn, time.time() - turn_start_t, batch_sets_created)
+		
+##### create prob maps
+for player in [0,1]:
+	winner[batch_set, :, player] = arch.sess.run(arch.winner, feed_dict={arch.moving_player: player})
+tree_probs[batch_set] = pu.return_probs_map(N_TURNS)
+
+
