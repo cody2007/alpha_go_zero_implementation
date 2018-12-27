@@ -38,8 +38,8 @@ __global__ void prob_to_coord_kernel(float * prob_map, int * to_coord,
 
 	float probs_sum = 0;
 	MAP_LOOP{
-		if(PROB < 0 || PROB > 1)
-			printf("PROB %f\n", PROB);
+		//if(PROB < 0 || PROB > 1)
+		//	printf("PROB %f\n", PROB);
 		//DASSERT(PROB >= 0 && PROB <= 1)
 
 		if((rand_val >= probs_sum) && (rand_val < (probs_sum + PROB))){
