@@ -3,7 +3,7 @@
 #define PANIC(A) { printf(A " %s:%i\n", __FILE__,__LINE__); exit(1); }
 #define ASSERT(S, A) { if(!(S)) PANIC(A) }
 
-#define N_TURNS 40//20
+#define N_TURNS 35//20
 #define BATCH_SZ 128
 #define N_PLAYERS 2
 

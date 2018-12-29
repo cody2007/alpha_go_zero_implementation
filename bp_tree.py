@@ -24,7 +24,7 @@ save_nm = None # this results in the optimization starting from scratch (comment
 ###### variables to save
 save_vars = ['LSQ_LAMBDA', 'LSQ_REG_LAMBDA', 'POL_CROSS_ENTROP_LAMBDA', 'VAL_LAMBDA', 'VALR_LAMBDA', 'L2_LAMBDA',
 	'FILTER_SZS', 'STRIDES', 'N_FILTERS', 'N_FC1', 'EPS', 'MOMENTUM', 'SAVE_FREQ', 'N_SIM', 'N_TURNS', 'CPUCT', 'N_TURNS_FRAC_TRAIN',
-	'N_EVAL_NN_GMS', 'N_EVAL_NN_GNU_GMS', 'N_EVAL_TREE_GMS', 'N_EVAL_TREE_GNU_GMS', 'CHKP_FREQ', 'N_BATCH_SETS',
+	'N_EVAL_NN_GMS', 'N_EVAL_NN_GNU_GMS', 'N_EVAL_TREE_GMS', 'N_EVAL_TREE_GNU_GMS', 'CHKP_FREQ', 'N_BATCH_SETS', 'FIRST_PASS_MV',
 	'save_nm', 'DIR_A', 'start_time', 'EVAL_FREQ', 'boards', 'scores', 'batch_set', 'batch_sets_created']
 training_ex_vars = ['board', 'winner', 'tree_probs']
 
@@ -51,7 +51,7 @@ if save_nm is None:
 	L2_LAMBDA = 1e-3 # weight regularization 
 	DIR_A = 0
 	CPUCT = 1
-	N_BATCH_SETS = 10
+	N_BATCH_SETS = 5
 
 	batch_set = 0
 	batch_sets_created = 0
@@ -68,8 +68,9 @@ if save_nm is None:
 	EPS = 2e-1 # backprop step size
 	MOMENTUM = .9
 
-	N_SIM = 150 #100#200#5#10 # number of simulations at each turn
-	N_TURNS = 40 # number of moves per player per game
+	N_SIM = 250 #0 #100#200#5#10 # number of simulations at each turn
+	N_TURNS = 35# 20 # number of moves per player per game
+	FIRST_PASS_MV = 25 # first mv where network can pass
 
 	N_TURNS_FRAC_TRAIN = 1 #.5 # fraction of (random) turns to run bp on, remainder are discarded
 
@@ -177,7 +178,7 @@ def run_sim(turn): # simulate game forward
 					pu.backup_visit(player, val)
 
 				pu.add_valid_mvs(player, valid_mv_map) # register valid moves in tree
-				to_coords = pu.choose_moves(player, pol, CPUCT)[0] # choose moves based on policy and Q values (latter of which already stored in tree)
+				to_coords = pu.choose_moves(player, pol, CPUCT, turn_sim >= FIRST_PASS_MV)[0] # choose moves based on policy and Q values (latter of which already stored in tree)
 				pu.register_mv(player, to_coords) # register move in tree
 
 				arch.sess.run(arch.move_frm_inputs, feed_dict={arch.moving_player: player, arch.to_coords_input: to_coords}) # move network (update GPU vars)
@@ -250,7 +251,7 @@ while True:
 				
 				#########
 				pu.add_valid_mvs(player, valid_mv_map) # register valid moves in tree
-				visit_count_map = pu.choose_moves(player, pol, CPUCT)[-1] # get number of times each node was visited
+				visit_count_map = pu.choose_moves(player, pol, CPUCT, turn >= FIRST_PASS_MV)[-1] # get number of times each node was visited
 				
 				to_coords = arch.sess.run([arch.tree_prob_visit_coord, arch.tree_prob_move_unit], feed_dict={arch.moving_player: player, 
 					arch.visit_count_map: visit_count_map, arch.dir_pre: dir_pre, arch.dir_a: DIR_A})[0] # make move in proportion to visit counts

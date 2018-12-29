@@ -51,7 +51,7 @@ if save_nm is None:
 	L2_LAMBDA = 1e-3 # weight regularization 
 	DIR_A = 0
 	CPUCT = 1
-	N_BATCH_SETS = 2
+	N_BATCH_SETS = 15
 
 	##### model parameters
 	N_LAYERS = 5 # number of model layers
@@ -65,7 +65,7 @@ if save_nm is None:
 	EPS = 2e-1 # backprop step size
 	MOMENTUM = .9
 
-	N_SIM = 100 #200#5#10 # number of simulations at each turn
+	N_SIM = 200#5#10 # number of simulations at each turn
 	N_TURNS = 40 # number of moves per player per game
 
 	N_TURNS_FRAC_TRAIN = 1 #.5 # fraction of (random) turns to run bp on, remainder are discarded

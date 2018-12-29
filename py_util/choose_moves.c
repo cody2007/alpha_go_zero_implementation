@@ -12,9 +12,9 @@
 static PyObject *choose_moves(PyObject *self, PyObject *args){
 	PyArrayObject *pol_np;
 	float * pol, CPUCT;
-	int moving_player;
+	int moving_player, allow_pass_mv;
 
-	if(!PyArg_ParseTuple(args, "iO!f", &moving_player, &PyArray_Type, &pol_np, &CPUCT)) return NULL;
+	if(!PyArg_ParseTuple(args, "iO!fi", &moving_player, &PyArray_Type, &pol_np, &CPUCT, &allow_pass_mv)) return NULL;
 	
 	/////////////////////// check inputs
 	ASSERT(pol_np != NULL, "absent inputs")
@@ -107,7 +107,8 @@ static PyObject *choose_moves(PyObject *self, PyObject *args){
 			P_map[MO] *= visit_sum_sqrt;
 
 			float U_tmp = Q_map[MO] + P_map[MO];
-			if((U_max < U_tmp) || (mv_ind_max == -1)){
+			if(((U_max < U_tmp) || (mv_ind_max == -1)) && (allow_pass_mv == 1 || 
+					map_loc != MAP_SZ)){
 				mv_ind_max = mv_ind;
 				U_max = U_tmp;
 			}
