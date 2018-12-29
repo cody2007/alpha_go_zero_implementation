@@ -29,8 +29,8 @@ __global__ void prob_to_coord_valid_mvs_kernel(float * prob_map, int * to_coord,
 		//DASSERT(p >= 0 && p <= 1)
 
 		// randomly selected or we're at the last move
-		if(((rand_val >= probs_sum) && (rand_val < (probs_sum + p))) || 
-				(mv_ind == (n_valid_mvs - 1))){
+		if(((rand_val >= probs_sum) && (rand_val < (probs_sum + p)))){// || 
+		//		(mv_ind == (n_valid_mvs - 1))){
 			to_coord[gm] = map_loc;
 			return;
 		}

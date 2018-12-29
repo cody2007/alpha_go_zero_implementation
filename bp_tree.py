@@ -20,12 +20,13 @@ sdir = 'models/' # directory to save and load models
 ################################### configuration: 
 #### load previous model or start from scratch?
 save_nm = None # this results in the optimization starting from scratch (comment out line below)
+#save_nm = 'go_0.2000EPS_7GMSZ_250N_SIM_35N_TURNS_128N_FILTERS_5N_LAYERS_5N_BATCH_SETS.npy'
 
 ###### variables to save
 save_vars = ['LSQ_LAMBDA', 'LSQ_REG_LAMBDA', 'POL_CROSS_ENTROP_LAMBDA', 'VAL_LAMBDA', 'VALR_LAMBDA', 'L2_LAMBDA',
 	'FILTER_SZS', 'STRIDES', 'N_FILTERS', 'N_FC1', 'EPS', 'MOMENTUM', 'SAVE_FREQ', 'N_SIM', 'N_TURNS', 'CPUCT', 'N_TURNS_FRAC_TRAIN',
-	'N_EVAL_NN_GMS', 'N_EVAL_NN_GNU_GMS', 'N_EVAL_TREE_GMS', 'N_EVAL_TREE_GNU_GMS', 'CHKP_FREQ', 'N_BATCH_SETS', 'FIRST_PASS_MV',
-	'save_nm', 'DIR_A', 'start_time', 'EVAL_FREQ', 'boards', 'scores', 'batch_set', 'batch_sets_created']
+	'N_EVAL_NN_GMS', 'N_EVAL_NN_GNU_GMS', 'N_EVAL_TREE_GMS', 'N_EVAL_TREE_GNU_GMS', 'CHKP_FREQ', 'N_BATCH_SETS', 'FIRST_PASS_MV', 'BUFFER_SZ',
+	'save_nm', 'DIR_A', 'start_time', 'EVAL_FREQ', 'boards', 'scores', 'batch_set', 'batch_sets_created', 'buffer_loc']
 training_ex_vars = ['board', 'winner', 'tree_probs']
 
 logs = ['val_mean_sq_err', 'pol_cross_entrop', 'pol_max_pre', 'pol_max', 'val_pearsonr','opt_batch','eval_batch']
@@ -55,6 +56,7 @@ if save_nm is None:
 
 	batch_set = 0
 	batch_sets_created = 0
+	buffer_loc = 0
 
 	##### model parameters
 	N_LAYERS = 5 # number of model layers
@@ -73,6 +75,13 @@ if save_nm is None:
 	FIRST_PASS_MV = 25 # first mv where network can pass
 
 	N_TURNS_FRAC_TRAIN = 1 #.5 # fraction of (random) turns to run bp on, remainder are discarded
+
+	#### training buffers
+	BUFFER_SZ = N_BATCH_SETS * N_TURNS * 2 * gv.BATCH_SZ
+
+	board = np.zeros((BUFFER_SZ, gv.n_rows, gv.n_cols, gv.n_input_channels),  dtype='single')
+	winner = np.zeros((N_BATCH_SETS, N_TURNS, 2, gv.BATCH_SZ), dtype='single')
+	tree_probs = np.zeros((N_BATCH_SETS, BUFFER_SZ/N_BATCH_SETS, gv.map_szt+1), dtype='single')
 
 	##### number of batch evaluations for testing model
 	N_EVAL_NN_GMS = 1 # model evaluation for printing
@@ -211,16 +220,10 @@ dir_pre = 0
 #else:
 #	dir_pre = gamma(DIR_A * gv.map_szt) / (gamma(DIR_A)**gv.map_szt)
 
-BUFFER_SZ = N_BATCH_SETS * N_TURNS * 2 * gv.BATCH_SZ
-board = np.zeros((BUFFER_SZ, gv.n_rows, gv.n_cols, gv.n_input_channels),  dtype='single')
-winner = np.zeros((N_BATCH_SETS, N_TURNS, 2, gv.BATCH_SZ), dtype='single')
-tree_probs = np.zeros((N_BATCH_SETS, BUFFER_SZ/N_BATCH_SETS, gv.map_szt+1), dtype='single')
-
 inds_total = np.arange(BUFFER_SZ)
 
 err_denom = 0
 val_mean_sq_err = 0; pol_cross_entrop_err = 0; val_pearsonr = 0
-buffer_loc = 0
 
 t_start = datetime.now()
 run_time = datetime.now() - datetime.now()
