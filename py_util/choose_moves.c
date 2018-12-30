@@ -49,7 +49,7 @@ static PyObject *choose_moves(PyObject *self, PyObject *args){
 
 	//////////////////////////////////////
 	for(int gm = 0; gm < BATCH_SZ; gm++){
-
+		
 		////// init
 		MAP_LOOP{
 			int MO = gm*MAP_SZ + loc;

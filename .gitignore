@@ -1,3 +1,6 @@
+*.ipynb
+notebooks/.ipynb_checkpoints/*
+models/*
 *.prof
 p.py
 *.o

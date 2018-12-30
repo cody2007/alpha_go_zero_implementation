@@ -49,7 +49,7 @@ __global__ void prob_to_coord_kernel(float * prob_map, int * to_coord,
 		probs_sum += PROB;
 	}
 
-	to_coord[gm] = MAP_SZ - 1;
+	to_coord[gm] = -1;
 
 	DASSERT(probs_sum <= 1.01)
 	DASSERT(probs_sum >= .999)
