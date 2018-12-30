@@ -8,7 +8,7 @@ __global__ void max_prob_to_coord_valid_mvs_kernel(float * prob_map, int * to_co
 
 	// determine max prob
 	float max_prob = -999;
-	int max_map_loc;
+	int max_map_loc = -1;
 	for(int mv_ind = 1; mv_ind < n_valid_mvs; mv_ind++){ // skip pass move
 		int map_loc = valid_mv_inds[mv_ind];
 		CHK_VALID_MAP_COORD(map_loc)

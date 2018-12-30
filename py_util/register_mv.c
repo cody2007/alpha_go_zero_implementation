@@ -33,6 +33,11 @@ static PyObject *register_mv(PyObject *self, PyObject *args){
 			found = 1;
 			break;
 		}
+		
+		//if(found == 0){
+		//	printf("could not find valid move: gm %i chosen_coord %i\n", gm, chosen_coord[gm]);
+		//	LOC = LO;
+		//}
 		ASSERT(found != 0, "could not find move");
 
 		// update pointer to tree_start

@@ -52,5 +52,8 @@ char * moved_internal; // [BATCH_SZ] used in move_random_ai, req. input to move_
 			n_valid_mvs ++;\
 		}\
 	}\
-	if(!n_valid_mvs) return; // no valid mvs
+	if(!n_valid_mvs){\
+		to_coord[gm] = -1;\
+		return;\
+	} // no valid mvs
 

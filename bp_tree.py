@@ -70,7 +70,7 @@ if save_nm is None:
 	EPS = 2e-1 # backprop step size
 	MOMENTUM = .9
 
-	N_SIM = 300 # number of simulations at each turn
+	N_SIM = 50 #300 # number of simulations at each turn
 	N_TURNS = 35 # number of moves per player per game
 
 	#### training buffers
