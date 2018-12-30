@@ -19,16 +19,16 @@ sdir = 'models/' # directory to save and load models
 
 ################################### configuration: 
 #### load previous model or start from scratch?
-#save_nm = None # this results in the optimization starting from scratch (comment out line below)
-#save_nm = 'go_cpu_tree_0.200000EPS_7GMSZ_1000N_SIM_0.001000L2_LAMBDA_0.900000MOMENTUM_0.025000VAL_LAMBDA_1.000000CPUCT_20N_TURNS_128N_FILTERS_EPS0.110000_EPS0.020000_EPS0.010000.npy'
-#save_nm = 'go_cpu_tree_0.2000EPS_7GMSZ_1000N_SIM_20N_TURNS_128N_FILTERS_0.50N_TURNS_FRAC_TRAIN.npy'
-save_nm = 'go_cpu_tree_0.2000EPS_7GMSZ_1000N_SIM_20N_TURNS_128N_FILTERS_1.00N_TURNS_FRAC_TRAIN_7N_LAYERS.npy'
+save_nm = None # this results in the optimization starting from scratch (comment out line below)
 
 ###### variables to save
 save_vars = ['LSQ_LAMBDA', 'LSQ_REG_LAMBDA', 'POL_CROSS_ENTROP_LAMBDA', 'VAL_LAMBDA', 'VALR_LAMBDA', 'L2_LAMBDA',
-	'FILTER_SZS', 'STRIDES', 'N_FILTERS', 'N_FC1', 'EPS', 'MOMENTUM', 'SAVE_FREQ', 'N_SIM', 'N_TURNS', 'CPUCT', 'N_TURNS_FRAC_TRAIN',
-	'N_EVAL_NN_GMS', 'N_EVAL_NN_GNU_GMS', 'N_EVAL_TREE_GMS', 'N_EVAL_TREE_GNU_GMS', 'CHKP_FREQ',
+	'FILTER_SZS', 'STRIDES', 'N_FILTERS', 'N_FC1', 'EPS', 'MOMENTUM', 'SAVE_FREQ', 'N_SIM', 'N_TURNS', 'CPUCT', 
+	'N_EVAL_NN_GMS', 'N_EVAL_NN_GNU_GMS', 'N_EVAL_TREE_GMS', 'N_EVAL_TREE_GNU_GMS', 'CHKP_FREQ', 'BUFFER_SZ', 'N_BATCH_SETS',
 	'save_nm', 'DIR_A', 'start_time', 'EVAL_FREQ', 'boards', 'scores']
+
+training_ex_vars = ['board', 'winner', 'tree_probs', 'batch_set', 'batch_sets_created', 'buffer_loc']
+
 logs = ['val_mean_sq_err', 'pol_cross_entrop', 'pol_max_pre', 'pol_max', 'val_pearsonr','opt_batch','eval_batch']
 print_logs = ['val_mean_sq_err', 'pol_cross_entrop', 'pol_max', 'val_pearsonr']
 
@@ -52,6 +52,11 @@ if save_nm is None:
 	L2_LAMBDA = 1e-3 # weight regularization 
 	DIR_A = 0
 	CPUCT = 1
+	N_BATCH_SETS = 2 # number of batch sets to store in training buffer
+
+	batch_set = 0
+	batch_sets_created = 0
+	buffer_loc = 0
 
 	##### model parameters
 	N_LAYERS = 5 # number of model layers
@@ -65,10 +70,15 @@ if save_nm is None:
 	EPS = 2e-1 # backprop step size
 	MOMENTUM = .9
 
-	N_SIM = 1000 # number of simulations at each turn
-	N_TURNS = 20 # number of moves per player per game
+	N_SIM = 300 # number of simulations at each turn
+	N_TURNS = 35 # number of moves per player per game
 
-	N_TURNS_FRAC_TRAIN = .5 # fraction of (random) turns to run bp on, remainder are discarded
+	#### training buffers
+	BUFFER_SZ = N_BATCH_SETS * N_TURNS * 2 * gv.BATCH_SZ
+
+	board = np.zeros((BUFFER_SZ, gv.n_rows, gv.n_cols, gv.n_input_channels),  dtype='single')
+	winner = np.zeros((N_BATCH_SETS, N_TURNS, 2, gv.BATCH_SZ), dtype='single')
+	tree_probs = np.zeros((N_BATCH_SETS, BUFFER_SZ/N_BATCH_SETS, gv.map_szt), dtype='single')
 
 	##### number of batch evaluations for testing model
 	N_EVAL_NN_GMS = 1 # model evaluation for printing
@@ -77,14 +87,14 @@ if save_nm is None:
 	N_EVAL_TREE_GNU_GMS = 0
 
 	######### save and checkpoint frequency
-	SAVE_FREQ = N_TURNS*N_TURNS_FRAC_TRAIN
+	SAVE_FREQ = N_TURNS
 	EVAL_FREQ = SAVE_FREQ*1
 	CHKP_FREQ = 60*60*10*2
 
 	start_time = datetime.now()
 	save_t = datetime.now()
 
-	save_nm = 'go_cpu_tree_%1.4fEPS_%iGMSZ_%iN_SIM_%iN_TURNS_%iN_FILTERS_%1.2fN_TURNS_FRAC_TRAIN.npy' % (EPS, gv.n_rows, N_SIM, N_TURNS, N_FILTERS[0], N_TURNS_FRAC_TRAIN)
+	save_nm = 'go_%1.4fEPS_%iGMSZ_%iN_SIM_%iN_TURNS_%iN_FILTERS_%iN_LAYERS_%iN_BATCH_SETS.npy' % (EPS, gv.n_rows, N_SIM, N_TURNS, N_FILTERS[0], N_LAYERS, N_BATCH_SETS)
 
 	boards = {}; scores = {} # eval
 	save_d = {}
@@ -105,7 +115,7 @@ else:
 	restore = True
 	save_d = np.load(sdir + save_nm).item()
 
-	for key in save_vars + state_vars:
+	for key in save_vars + state_vars + training_ex_vars:
 		if key == 'save_nm':
 			continue
 		exec('%s = save_d["%s"]' % (key,key))
@@ -130,7 +140,7 @@ def sv(): # save game
 
 	global save_d, save_t
 	# update state vars
-	for key in state_vars:
+	for key in state_vars + training_ex_vars:
 		exec('save_d["%s"] = %s' % (key, key))
 	
 	# save
@@ -205,9 +215,6 @@ dir_pre = 0
 #else:
 #	dir_pre = gamma(DIR_A * gv.map_szt) / (gamma(DIR_A)**gv.map_szt)
 
-BUFFER_SZ = gv.BATCH_SZ * N_TURNS * 2
-board = np.zeros((BUFFER_SZ, gv.n_rows, gv.n_cols, gv.n_input_channels),  dtype='single')
-winner = np.zeros((N_TURNS, 2, gv.BATCH_SZ), dtype='single')
 inds_total = np.arange(BUFFER_SZ)
 
 err_denom = 0
@@ -226,50 +233,59 @@ sv()
 ######################################### training loop:
 while True:
 	######### generate batches
-	buffer_loc = 0
+	while batch_sets_created < N_BATCH_SETS:
+		######### generate batches
+		if buffer_loc >= BUFFER_SZ:
+			buffer_loc = 0
+			batch_set = 0
 
-	arch.sess.run(arch.init_state)
-	pu.init_tree()
-	turn_start_t = time.time()
-	for turn in range(N_TURNS):
-		run_sim(turn)
-		
-		### make move
+		arch.sess.run(arch.init_state)
+		pu.init_tree()
+		turn_start_t = time.time()
+		for turn in range(N_TURNS):
+			run_sim(turn)
+			
+			### make move
+			for player in [0,1]:
+				inds = buffer_loc + np.arange(gv.BATCH_SZ)
+				board[inds], valid_mv_map, pol = arch.sess.run([arch.imgs, arch.valid_mv_map, arch.pol], feed_dict = ret_d(player)) # generate batch and valid moves
+				
+				#########
+				pu.add_valid_mvs(player, valid_mv_map) # register valid moves in tree
+				visit_count_map = pu.choose_moves(player, pol, CPUCT)[-1] # get number of times each node was visited
+				
+				to_coords = arch.sess.run([arch.tree_prob_visit_coord, arch.tree_prob_move_unit], feed_dict={arch.moving_player: player, 
+					arch.visit_count_map: visit_count_map, arch.dir_pre: dir_pre, arch.dir_a: DIR_A})[0] # make move in proportion to visit counts
+
+				pu.register_mv(player, to_coords) # register move in tree
+
+				###############
+				
+				buffer_loc += gv.BATCH_SZ
+
+			pu.prune_tree()
+			
+			if (turn+1) % 2 == 0:
+				print 'finished turn', turn, time.time() - turn_start_t
+				
+
+		##### create prob maps
 		for player in [0,1]:
-			inds = buffer_loc + np.arange(gv.BATCH_SZ)
-			board[inds], valid_mv_map, pol = arch.sess.run([arch.imgs, arch.valid_mv_map, arch.pol], feed_dict = ret_d(player)) # generate batch and valid moves
-			
-			#########
-			pu.add_valid_mvs(player, valid_mv_map) # register valid moves in tree
-			visit_count_map = pu.choose_moves(player, pol, CPUCT)[-1] # get number of times each node was visited
-			
-			to_coords = arch.sess.run([arch.tree_prob_visit_coord, arch.tree_prob_move_unit], feed_dict={arch.moving_player: player, 
-				arch.visit_count_map: visit_count_map, arch.dir_pre: dir_pre, arch.dir_a: DIR_A})[0] # make move in proportion to visit counts
+			winner[batch_set, :, player] = arch.sess.run(arch.winner, feed_dict={arch.moving_player: player})
+		tree_probs[batch_set] = pu.return_probs_map(N_TURNS)
 
-			pu.register_mv(player, to_coords) # register move in tree
+		batch_set += 1
+		batch_sets_created += 1
 
-			###############
-			
-			buffer_loc += gv.BATCH_SZ
-
-		pu.prune_tree()
-		
-		if (turn+1) % 2 == 0:
-			print 'finished turn', turn, time.time() - turn_start_t
-			
-
-	##### create prob maps
-	for player in [0,1]:
-		winner[:, player] = arch.sess.run(arch.winner, feed_dict={arch.moving_player: player})
-	tree_probs = pu.return_probs_map()
+	batch_sets_created -= 1
 
 	#############################
 	# train
 	random.shuffle(inds_total)
-	for batch in range(np.int(N_TURNS_FRAC_TRAIN*N_TURNS)):
+	for batch in range(N_TURNS):
 		inds = inds_total[batch*gv.BATCH_SZ + np.arange(gv.BATCH_SZ)]
 		
-		board2, tree_probs2 = pu.rotate_reflect_imgs(board[inds], tree_probs[inds]) # rotate and reflect board randomly
+		board2, tree_probs2 = pu.rotate_reflect_imgs(board[inds], tree_probs.reshape((BUFFER_SZ, gv.map_szt))[inds]) # rotate and reflect board randomly
 
 		train_dict = {arch.imgs: board2,
 				arch.pol_target: tree_probs2,

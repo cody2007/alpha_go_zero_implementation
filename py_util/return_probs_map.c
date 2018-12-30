@@ -1,5 +1,10 @@
 // return probs from tree visit counts
 static PyObject *return_probs_map(PyObject *self, PyObject *args){
+	int N_TURNS;
+
+	if(!PyArg_ParseTuple(args, "i", &N_TURNS)) return NULL;
+	
+	ASSERT(N_TURNS > 0, "N_TURNS must be > 0")
 
 	///// output
 	npy_intp dims[3];
