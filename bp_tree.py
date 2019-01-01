@@ -20,6 +20,7 @@ sdir = 'models/' # directory to save and load models
 ################################### configuration: 
 #### load previous model or start from scratch?
 save_nm = None # this results in the optimization starting from scratch (comment out line below)
+save_nm = 'go_0.2000EPS_7GMSZ_300N_SIM_35N_TURNS_128N_FILTERS_5N_LAYERS_3N_BATCH_SETS.npy'
 
 ###### variables to save
 save_vars = ['LSQ_LAMBDA', 'LSQ_REG_LAMBDA', 'POL_CROSS_ENTROP_LAMBDA', 'VAL_LAMBDA', 'VALR_LAMBDA', 'L2_LAMBDA',
@@ -129,6 +130,8 @@ else:
 	append_txt = '_EPS%f.npy' % EPS
 	if EPS_ORIG != EPS and save_nm.find(append_txt) == -1:
 		save_nm = save_nm.split('.npy')[0] + append_txt
+	
+	batch_sets_created = N_BATCH_SETS - 1
 	print 'saving to:'
 	print save_nm
 
@@ -229,13 +232,12 @@ run_time = datetime.now() - datetime.now()
 print '------------- saving to ', save_nm
 sv()
 
-
 ######################################### training loop:
 while True:
 	######### generate batches
 	while batch_sets_created < N_BATCH_SETS:
 		######### generate batches
-		if buffer_loc >= BUFFER_SZ:
+		if buffer_loc >= BUFFER_SZ or batch_set >= N_BATCH_SETS:
 			buffer_loc = 0
 			batch_set = 0
 
@@ -266,7 +268,7 @@ while True:
 			pu.prune_tree()
 			
 			if (turn+1) % 2 == 0:
-				print 'finished turn', turn, time.time() - turn_start_t
+				print 'finished turn %i (%i sec) %i' % (turn, time.time() - turn_start_t, batch_set)
 				
 
 		##### create prob maps
@@ -277,7 +279,7 @@ while True:
 		batch_set += 1
 		batch_sets_created += 1
 
-	batch_sets_created -= 1
+	batch_sets_created = N_BATCH_SETS - 1
 
 	#############################
 	# train

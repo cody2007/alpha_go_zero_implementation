@@ -86,10 +86,12 @@ def move_ai(moving_player=1):
 			continue
 		if ai_mv.find('= resign') != -1:
 			print 'resign ', gm
-			assert False
+			#assert False
 			continue
 		if len(ai_mv) <= 3:
-			assert False, 'gm %i resp %s, orig %s' % (gm, ai_mv, ai_mv_orig)
+			#assert False, 'gm %i resp %s, orig %s' % (gm, ai_mv, ai_mv_orig)
+			assert 'gm %i resp %s, orig %s' % (gm, ai_mv, ai_mv_orig)
+			continue
 		col = row_nm.find(ai_mv[2])
 		assert col != -1, 'gm %i resp %s' % (gm, ai_mv)
 		row = gv.n_rows - np.int(ai_mv[3:])
