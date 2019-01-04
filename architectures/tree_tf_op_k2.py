@@ -5,8 +5,6 @@ sys.path.append("..")
 import global_vars as gv
 import os
 import kfac
-from kfac.examples import mlp
-
 sess = tf.InteractiveSession()
 
 hdir = os.getenv('HOME')
@@ -50,9 +48,9 @@ def tf_pearsonr(val, val_target_nmean):
 def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 		POL_CROSS_ENTROP_LAMBDA, VAL_LAMBDA, WEIGHT_STD=1e-2):
 	
-	global convs, pol, pol_pre, train_step, layer_collection
-	global val, val_mean_sq_err, pol_loss, entrop, saver, update_ops 
-	global val_pearsonr, loss, Q_map, P_map, visit_count_map
+	global convs, weights, outputs, output_nms, pol, pol_pre, pol_mean_sq_err, train_step
+	global val, val_mean_sq_err, pol_loss, entrop, saver, update_ops, layer_collection
+	global val_pearsonr, pol_mean_sq_reg_err, loss, Q_map, P_map, visit_count_map
 	global move_random_ai, init_state, nn_move_unit, nn_prob_move_unit
         global tree_to_coords, nn_max_to_coords, nn_prob_to_coords
 	global tree_prob_move_unit, backup_visit, backup_visit_terminal, tree_det_move_unit
@@ -66,9 +64,8 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 	assert len(N_FILTERS) == len(FILTER_SZS) == len(STRIDES)
 
 	#### init state
-	layer_collection = kfac.LayerCollection()
-
-        init_state = tf_op.init_state()
+        layer_collection = kfac.LayerCollection()
+	init_state = tf_op.init_state()
 
 	dir_pre = tf.placeholder(tf.float32, shape=())
 	dir_a = tf.placeholder(tf.float32, shape=())
@@ -88,6 +85,7 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 
 	#### imgs
 	imgs, valid_mv_map = tf_op.create_batch(moving_player)
+	imgs += tf.random_normal(shape=tf.shape(imgs), mean=0.0, stddev=.01, dtype=tf.float32) 
 	#print imgs.shape, imgs_shape
 	assert imgs.shape == tf.placeholder(tf.float32, shape=imgs_shape).shape, 'tf op shape not matching global_vars'
 	move_random_ai = tf_op.move_random_ai(moving_player)
@@ -102,14 +100,19 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
         
         convs = []
 	
-	layer = tf.layers.Conv2D(filters=N_FILTERS[0], kernel_size=[FILTER_SZS[0]]*2, 
+	'''layer = tf.layers.Conv2D(filters=N_FILTERS[0], kernel_size=[FILTER_SZS[0]]*2, 
 		strides=[STRIDES[0]]*2, padding="same", activation=None, name='conv0')
 	preactivations = layer(imgs)
 	activations = tf.nn.relu(preactivations)
 
 	layer_collection.register_conv2d((layer.kernel, layer.bias), (1,1,1,1), "SAME", imgs, preactivations)
 
-	convs += [activations]
+	convs += [activations]'''
+
+	convs += [tf.nn.relu(tf.contrib.layers.batch_norm(tf.layers.conv2d(inputs=imgs, filters=N_FILTERS[0], kernel_size=[FILTER_SZS[0]]*2, 
+		strides=[STRIDES[0]]*2, padding="same", activation=None, name='conv0')))]
+
+
 
 	for i in range(1, len(N_FILTERS)):
 		layer = tf.layers.Conv2D(filters=N_FILTERS[i], kernel_size=[FILTER_SZS[i]]*2,
@@ -126,8 +129,8 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 		activations = tf.nn.relu(preactivations)
 		convs += [activations]
 
-
 	out_sz = np.int(np.prod(convs[-1].shape[1:]))
+	global convr
 	convr = tf.reshape(convs[-1], [gv.BATCH_SZ, out_sz])
 
 	################### pol
@@ -149,6 +152,21 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 	
 	pol = tf.nn.softmax(pol_pre)
 	
+	'''################### pol
+	# FC layer
+	wFC1p = tf.Variable(tf.random_normal([out_sz, N_FC1], stddev=WEIGHT_STD), name='wFC1')
+	bFC1p = tf.Variable(tf.random_normal([N_FC1], mean=WEIGHT_STD*2, stddev=WEIGHT_STD), name='bFC1')
+	
+	oFC1p = tf.nn.relu(tf.matmul(convr, wFC1p) + bFC1p)
+
+	# FC layer
+	wFC2p = tf.Variable(tf.random_normal([N_FC1, map_prod], stddev=WEIGHT_STD), name='wFC2')
+	bFC2p = tf.Variable(tf.random_normal([map_prod], mean=WEIGHT_STD*2, stddev=WEIGHT_STD), name='bFC2')
+	
+	pol_pre = tf.nn.relu(tf.matmul(oFC1p, wFC2p) + bFC2p)
+
+	pol = tf.nn.softmax(pol_pre)
+	'''
 	nn_max_to_coords = tf.argmax(pol_pre, 1, output_type=tf.int32)
 	nn_prob_to_coords = tf_op.prob_to_coord(pol, dir_pre, dir_a) 
 	nn_prob_to_coords_valid_mvs = tf_op.prob_to_coord_valid_mvs(pol)
@@ -160,11 +178,19 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 	nn_prob_move_unit_valid_mvs = tf_op.move_unit(nn_prob_to_coords_valid_mvs, moving_player)
 	nn_max_prob_move_unit_valid_mvs = tf_op.move_unit(nn_max_prob_to_coords_valid_mvs, moving_player)
 
-	###pol_cross_entrop_err_test
+	# sq
+	sq_err = tf.reduce_sum((pol - pol_target)**2, axis=1)
+	pol_mean_sq_err = tf.reduce_mean(sq_err)
+
+	# sq reg
+	sq_err_reg = tf.reduce_sum(pol_pre**2, axis=1)
+	pol_mean_sq_reg_err = tf.reduce_mean(sq_err_reg)
+
 	# cross entrop
 	pol_ln = tf.log(pol)
 	pol_cross_entrop_err = -tf.reduce_mean(pol_target*pol_ln)
 
+	global oFC1v, preactivations
 	################# val
 	# FC layer
 	layer = tf.layers.Dense(N_FC1, kernel_initializer=tf.random_normal_initializer(), name='v_FC1')
@@ -181,7 +207,7 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 	layer_collection.register_fully_connected((layer.kernel, layer.bias), oFC1v, preactivations)
 
 	layer_collection.register_normal_predictive_distribution(val, var=1.0)
-	
+
 	# sq error
 	val_mean_sq_err = tf.reduce_mean((val - val_target)**2)
 
@@ -203,22 +229,6 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 	
 	loss = POL_CROSS_ENTROP_LAMBDA * pol_cross_entrop_err + \
 	       VAL_LAMBDA * val_mean_sq_err
-
-	params = tf.trainable_variables()
-	grads = tf.gradients(loss, params)
-        grad_params = list(zip(grads, params))
-
-	learning_rate = 0#.25
-	damping_lambda = .01
-	moving_avg_decay=.99
-	kfac_norm_constraint = .0001
-	kfac_momentum = .9
-
-	#optimizer = kfac.optimizer.KfacOptimizer(layer_collection=layer_collection, damping=damping_lambda,
-	#	learning_rate=learning_rate, cov_ema_decay=moving_avg_decay,
-	#	momentum=kfac_momentum, norm_constraint=kfac_norm_constraint)
-
-	#train_step = optimizer.apply_gradients(grad_params)
 
 	with tf.control_dependencies(update_ops):
 		train_step = tf.train.MomentumOptimizer(EPS, MOMENTUM).minimize(loss)

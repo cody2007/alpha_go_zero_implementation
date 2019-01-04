@@ -11,7 +11,7 @@ import global_vars as gv
 from scipy.stats import pearsonr
 from colorama import Fore, Style
 from datetime import datetime
-import architectures.tree_tf_op_k as arch
+import architectures.tree_tf_op_k3 as arch
 import py_util.py_util as pu
 from scipy.special import gamma
 import gnu_go_test as gt
@@ -48,7 +48,7 @@ if save_nm is None:
 	VAL_LAMBDA = .025 #.05
 	DIR_A = 0
 	CPUCT = 1
-	N_BATCH_SETS = 3 # number of batch sets to store in training buffer
+	N_BATCH_SETS = 1 # number of batch sets to store in training buffer
 
 	batch_set = 0
 	batch_sets_created = 0
@@ -63,11 +63,11 @@ if save_nm is None:
 	N_FC1 = 128 # number of units in fully connected layer
 	
 	
-	EPS = 2e-1 # backprop step size
+	EPS = 0.#1e-5#2e-1 # backprop step size
 	MOMENTUM = .9
 
-	N_SIM = 300 # number of simulations at each turn
-	N_TURNS = 35 # number of moves per player per game
+	N_SIM = 15#0 #100#300 # number of simulations at each turn
+	N_TURNS = 5#20#10#35 # number of moves per player per game
 
 	#### training buffers
 	BUFFER_SZ = N_BATCH_SETS * N_TURNS * 2 * gv.BATCH_SZ
@@ -263,7 +263,8 @@ while True:
 			pu.prune_tree()
 			
 			if (turn+1) % 2 == 0:
-				print 'finished turn %i (%i sec) %i' % (turn, time.time() - turn_start_t, batch_set)
+				o = arch.sess.run(arch.convs[0], feed_dict=ret_d(0)).max()
+				print 'finished turn %i (%i sec) %i o: %f' % (turn, time.time() - turn_start_t, batch_set, o)
 				
 
 		##### create prob maps
@@ -287,6 +288,8 @@ while True:
 		train_dict = {arch.imgs: board2,
 				arch.pol_target: tree_probs2,
 				arch.val_target: winner.ravel()[inds]}
+
+		#val_mean_sq_err_tmp, pol_cross_entrop_err_tmp, val_pearsonr_tmp = 0,0,0
 
 		val_mean_sq_err_tmp, pol_cross_entrop_err_tmp, val_pearsonr_tmp = arch.sess.run(bp_eval_nodes, feed_dict=train_dict)[1:]
 
@@ -325,42 +328,7 @@ while True:
 						if gnu:
 							gt.init_board(arch.sess.run(arch.gm_vars['board']))
 
-						for turn in range(N_TURNS):
-							board_tmp = arch.sess.run(arch.gm_vars['board'])
-						
-							#### search / make move
-							if nm == 'tree':
-								run_sim(turn)
-								assert False
-							else:
-								# prob choose first move, deterministically choose remainder
-								if turn == 0:
-									to_coords = arch.sess.run([arch.nn_prob_to_coords_valid_mvs, arch.nn_prob_move_unit_valid_mvs], feed_dict=d)[0]
-								else:
-									to_coords = arch.sess.run([arch.nn_max_prob_to_coords_valid_mvs, arch.nn_max_prob_move_unit_valid_mvs], feed_dict=d)[0]
-
-
-							board_tmp2 = arch.sess.run(arch.gm_vars['board'])
-							n_mvs += board_tmp.sum() - board_tmp2.sum()
-
-							# move opposing player
-							if gnu:
-								gt.move_nn(to_coords) 
-
-								# mv gnugo
-								ai_to_coords = gt.move_ai()
-								arch.sess.run(arch.imgs, feed_dict={arch.moving_player: 1})
-								arch.sess.run(arch.nn_max_move_unit, feed_dict={arch.moving_player: 1, arch.nn_max_to_coords: ai_to_coords})
-							else:
-								arch.sess.run(arch.imgs, feed_dict = ret_d(1))
-								arch.sess.run(arch.move_random_ai, feed_dict = ret_d(1))
-		
-							boards[key][turn] = arch.sess.run(arch.gm_vars['board'])
-
-							if nm == 'tree':
-								pu.prune_tree()
-							# turn
-
+					
 						# save stats
 						win_tmp, score_tmp, n_captures_tmp = arch.sess.run([arch.winner, arch.score, arch.n_captures], feed_dict={arch.moving_player: 0})
 						scores[key] = copy.deepcopy(score_tmp)

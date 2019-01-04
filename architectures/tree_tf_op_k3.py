@@ -4,9 +4,7 @@ import sys
 sys.path.append("..")
 import global_vars as gv
 import os
-import kfac
-from kfac.examples import mlp
-
+#import kfac
 sess = tf.InteractiveSession()
 
 hdir = os.getenv('HOME')
@@ -50,9 +48,9 @@ def tf_pearsonr(val, val_target_nmean):
 def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 		POL_CROSS_ENTROP_LAMBDA, VAL_LAMBDA, WEIGHT_STD=1e-2):
 	
-	global convs, pol, pol_pre, train_step, layer_collection
+	global convs, weights, outputs, output_nms, pol, pol_pre, pol_mean_sq_err, train_step
 	global val, val_mean_sq_err, pol_loss, entrop, saver, update_ops 
-	global val_pearsonr, loss, Q_map, P_map, visit_count_map
+	global val_pearsonr, pol_mean_sq_reg_err, loss, Q_map, P_map, visit_count_map
 	global move_random_ai, init_state, nn_move_unit, nn_prob_move_unit
         global tree_to_coords, nn_max_to_coords, nn_prob_to_coords
 	global tree_prob_move_unit, backup_visit, backup_visit_terminal, tree_det_move_unit
@@ -66,8 +64,7 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 	assert len(N_FILTERS) == len(FILTER_SZS) == len(STRIDES)
 
 	#### init state
-	layer_collection = kfac.LayerCollection()
-
+	#layer_collection = kfac.LayerCollection()
         init_state = tf_op.init_state()
 
 	dir_pre = tf.placeholder(tf.float32, shape=())
@@ -100,14 +97,14 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
         pol_target = tf.placeholder(tf.float32, shape=[gv.BATCH_SZ, map_prod])
         val_target = tf.placeholder(tf.float32, shape=[gv.BATCH_SZ])
         
-        convs = []
+        convs = []; weights = []; outputs = []; output_nms = []
 	
 	layer = tf.layers.Conv2D(filters=N_FILTERS[0], kernel_size=[FILTER_SZS[0]]*2, 
 		strides=[STRIDES[0]]*2, padding="same", activation=None, name='conv0')
 	preactivations = layer(imgs)
 	activations = tf.nn.relu(preactivations)
 
-	layer_collection.register_conv2d((layer.kernel, layer.bias), (1,1,1,1), "SAME", imgs, preactivations)
+	#layer_collection.register_conv2d((layer.kernel, layer.bias), (1,1,1,1), "SAME", imgs, preactivations)
 
 	convs += [activations]
 
@@ -117,7 +114,7 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 		
 		preactivations = layer(convs[i-1])
 
-		layer_collection.register_conv2d((layer.kernel, layer.bias), (1,1,1,1), "SAME", convs[i-1], preactivations)
+		#layer_collection.register_conv2d((layer.kernel, layer.bias), (1,1,1,1), "SAME", convs[i-1], preactivations)
 
 		# residual bypass
 		if (i % 2) == 0:
@@ -125,7 +122,6 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 
 		activations = tf.nn.relu(preactivations)
 		convs += [activations]
-
 
 	out_sz = np.int(np.prod(convs[-1].shape[1:]))
 	convr = tf.reshape(convs[-1], [gv.BATCH_SZ, out_sz])
@@ -136,19 +132,19 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 	preactivations = layer(convr)
 	oFC1p = tf.nn.relu(preactivations)
 
-	layer_collection.register_fully_connected((layer.kernel, layer.bias), convr, preactivations)
+	#layer_collection.register_fully_connected((layer.kernel, layer.bias), convr, preactivations)
 
 	# FC layer
 	layer = tf.layers.Dense(map_prod, kernel_initializer=tf.random_normal_initializer(), name='FC2')
 	preactivations = layer(oFC1p)
 	pol_pre = tf.nn.relu(preactivations)
 
-	layer_collection.register_fully_connected((layer.kernel, layer.bias), oFC1p, preactivations)
+	#layer_collection.register_fully_connected((layer.kernel, layer.bias), oFC1p, preactivations)
 
-	layer_collection.register_categorical_predictive_distribution(pol_pre)
+	#layer_collection.register_categorical_predictive_distribution(pol_pre)
 	
 	pol = tf.nn.softmax(pol_pre)
-	
+		
 	nn_max_to_coords = tf.argmax(pol_pre, 1, output_type=tf.int32)
 	nn_prob_to_coords = tf_op.prob_to_coord(pol, dir_pre, dir_a) 
 	nn_prob_to_coords_valid_mvs = tf_op.prob_to_coord_valid_mvs(pol)
@@ -160,34 +156,43 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 	nn_prob_move_unit_valid_mvs = tf_op.move_unit(nn_prob_to_coords_valid_mvs, moving_player)
 	nn_max_prob_move_unit_valid_mvs = tf_op.move_unit(nn_max_prob_to_coords_valid_mvs, moving_player)
 
-	###pol_cross_entrop_err_test
+	# sq
+	sq_err = tf.reduce_sum((pol - pol_target)**2, axis=1)
+	pol_mean_sq_err = tf.reduce_mean(sq_err)
+
+	# sq reg
+	sq_err_reg = tf.reduce_sum(pol_pre**2, axis=1)
+	pol_mean_sq_reg_err = tf.reduce_mean(sq_err_reg)
+
 	# cross entrop
 	pol_ln = tf.log(pol)
 	pol_cross_entrop_err = -tf.reduce_mean(pol_target*pol_ln)
 
+	global oFC1v, preactivations
 	################# val
 	# FC layer
 	layer = tf.layers.Dense(N_FC1, kernel_initializer=tf.random_normal_initializer(), name='v_FC1')
 	preactivations = layer(convr)
 	oFC1v = preactivations
 
-	layer_collection.register_fully_connected((layer.kernel, layer.bias), convr, preactivations)
+	#layer_collection.register_fully_connected((layer.kernel, layer.bias), convr, preactivations)
 
 	# FC layer
 	layer = tf.layers.Dense(1, kernel_initializer=tf.random_normal_initializer(), name='v_FC2')
 	preactivations = layer(oFC1v)
 	val = tf.squeeze(tf.tanh(preactivations))
 
-	layer_collection.register_fully_connected((layer.kernel, layer.bias), oFC1v, preactivations)
+	#layer_collection.register_fully_connected((layer.kernel, layer.bias), oFC1v, preactivations)
 
-	layer_collection.register_normal_predictive_distribution(val, var=1.0)
-	
+	#layer_collection.register_normal_predictive_distribution(val, var=1.0)
+
 	# sq error
 	val_mean_sq_err = tf.reduce_mean((val - val_target)**2)
 
 	# pearson
 	val_pearsonr = tf_pearsonr(val, val_target)
 
+	
 	################### movement from tree statistics
 	visit_count_map = tf.placeholder(tf.float32, shape=(gv.BATCH_SZ, gv.map_szt))
 	
@@ -220,8 +225,10 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 
 	#train_step = optimizer.apply_gradients(grad_params)
 
+
 	with tf.control_dependencies(update_ops):
-		train_step = tf.train.MomentumOptimizer(EPS, MOMENTUM).minimize(loss)
+		#train_step = tf.train.MomentumOptimizer(EPS, MOMENTUM).minimize(loss)
+		train_step = tf.train.GradientDescentOptimizer(EPS).minimize(loss)
 
 	sess.run(tf.global_variables_initializer())
 
