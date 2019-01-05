@@ -4,7 +4,7 @@ import sys
 sys.path.append("..")
 import global_vars as gv
 import os
-#import kfac
+import kfac
 sess = tf.InteractiveSession()
 
 hdir = os.getenv('HOME')
@@ -64,7 +64,7 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 	assert len(N_FILTERS) == len(FILTER_SZS) == len(STRIDES)
 
 	#### init state
-	#layer_collection = kfac.LayerCollection()
+	layer_collection = kfac.LayerCollection()
         init_state = tf_op.init_state()
 
 	dir_pre = tf.placeholder(tf.float32, shape=())
@@ -100,21 +100,23 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
         convs = []; weights = []; outputs = []; output_nms = []
 	
 	layer = tf.layers.Conv2D(filters=N_FILTERS[0], kernel_size=[FILTER_SZS[0]]*2, 
+		kernel_initializer=tf.random_normal_initializer(stddev=WEIGHT_STD),
 		strides=[STRIDES[0]]*2, padding="same", activation=None, name='conv0')
 	preactivations = layer(imgs)
 	activations = tf.nn.relu(preactivations)
 
-	#layer_collection.register_conv2d((layer.kernel, layer.bias), (1,1,1,1), "SAME", imgs, preactivations)
+	layer_collection.register_conv2d((layer.kernel, layer.bias), (1,1,1,1), "SAME", imgs, preactivations)
 
 	convs += [activations]
 
 	for i in range(1, len(N_FILTERS)):
 		layer = tf.layers.Conv2D(filters=N_FILTERS[i], kernel_size=[FILTER_SZS[i]]*2,
+				kernel_initializer=tf.random_normal_initializer(stddev=WEIGHT_STD),
 				strides=[STRIDES[i]]*2, padding="same", activation=None, name='conv%i' % i)
 		
 		preactivations = layer(convs[i-1])
 
-		#layer_collection.register_conv2d((layer.kernel, layer.bias), (1,1,1,1), "SAME", convs[i-1], preactivations)
+		layer_collection.register_conv2d((layer.kernel, layer.bias), (1,1,1,1), "SAME", convs[i-1], preactivations)
 
 		# residual bypass
 		if (i % 2) == 0:
@@ -128,20 +130,20 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 
 	################### pol
 	# FC layer
-	layer = tf.layers.Dense(N_FC1, kernel_initializer=tf.random_normal_initializer(), name='FC1')
+	layer = tf.layers.Dense(N_FC1, kernel_initializer=tf.random_normal_initializer(stddev=WEIGHT_STD), name='FC1')
 	preactivations = layer(convr)
 	oFC1p = tf.nn.relu(preactivations)
 
-	#layer_collection.register_fully_connected((layer.kernel, layer.bias), convr, preactivations)
+	layer_collection.register_fully_connected((layer.kernel, layer.bias), convr, preactivations)
 
 	# FC layer
-	layer = tf.layers.Dense(map_prod, kernel_initializer=tf.random_normal_initializer(), name='FC2')
+	layer = tf.layers.Dense(map_prod, kernel_initializer=tf.random_normal_initializer(stddev=WEIGHT_STD), name='FC2')
 	preactivations = layer(oFC1p)
 	pol_pre = tf.nn.relu(preactivations)
 
-	#layer_collection.register_fully_connected((layer.kernel, layer.bias), oFC1p, preactivations)
+	layer_collection.register_fully_connected((layer.kernel, layer.bias), oFC1p, preactivations)
 
-	#layer_collection.register_categorical_predictive_distribution(pol_pre)
+	layer_collection.register_categorical_predictive_distribution(pol_pre)
 	
 	pol = tf.nn.softmax(pol_pre)
 		
@@ -171,20 +173,20 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 	global oFC1v, preactivations
 	################# val
 	# FC layer
-	layer = tf.layers.Dense(N_FC1, kernel_initializer=tf.random_normal_initializer(), name='v_FC1')
+	layer = tf.layers.Dense(N_FC1, kernel_initializer=tf.random_normal_initializer(stddev=WEIGHT_STD), name='v_FC1')
 	preactivations = layer(convr)
 	oFC1v = preactivations
 
-	#layer_collection.register_fully_connected((layer.kernel, layer.bias), convr, preactivations)
+	layer_collection.register_fully_connected((layer.kernel, layer.bias), convr, preactivations)
 
 	# FC layer
-	layer = tf.layers.Dense(1, kernel_initializer=tf.random_normal_initializer(), name='v_FC2')
+	layer = tf.layers.Dense(1, kernel_initializer=tf.random_normal_initializer(stddev=WEIGHT_STD), name='v_FC2')
 	preactivations = layer(oFC1v)
 	val = tf.squeeze(tf.tanh(preactivations))
 
-	#layer_collection.register_fully_connected((layer.kernel, layer.bias), oFC1v, preactivations)
+	layer_collection.register_fully_connected((layer.kernel, layer.bias), oFC1v, preactivations)
 
-	#layer_collection.register_normal_predictive_distribution(val, var=1.0)
+	layer_collection.register_normal_predictive_distribution(val, var=1.0)
 
 	# sq error
 	val_mean_sq_err = tf.reduce_mean((val - val_target)**2)
@@ -213,22 +215,22 @@ def init_model(N_FILTERS, FILTER_SZS, STRIDES, N_FC1, EPS, MOMENTUM, \
 	grads = tf.gradients(loss, params)
         grad_params = list(zip(grads, params))
 
-	learning_rate = 0#.25
+	learning_rate = .25
 	damping_lambda = .01
 	moving_avg_decay=.99
 	kfac_norm_constraint = .0001
 	kfac_momentum = .9
 
-	#optimizer = kfac.optimizer.KfacOptimizer(layer_collection=layer_collection, damping=damping_lambda,
-	#	learning_rate=learning_rate, cov_ema_decay=moving_avg_decay,
-	#	momentum=kfac_momentum, norm_constraint=kfac_norm_constraint)
+	optimizer = kfac.optimizer.KfacOptimizer(layer_collection=layer_collection, damping=damping_lambda,
+		learning_rate=EPS, cov_ema_decay=moving_avg_decay,
+		momentum=kfac_momentum, norm_constraint=kfac_norm_constraint)
 
-	#train_step = optimizer.apply_gradients(grad_params)
+	train_step = optimizer.apply_gradients(grad_params)
 
 
-	with tf.control_dependencies(update_ops):
-		#train_step = tf.train.MomentumOptimizer(EPS, MOMENTUM).minimize(loss)
-		train_step = tf.train.GradientDescentOptimizer(EPS).minimize(loss)
+	#with tf.control_dependencies(update_ops):
+	#	#train_step = tf.train.MomentumOptimizer(EPS, MOMENTUM).minimize(loss)
+	#	train_step = tf.train.GradientDescentOptimizer(EPS).minimize(loss)
 
 	sess.run(tf.global_variables_initializer())
 
