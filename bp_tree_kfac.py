@@ -20,6 +20,7 @@ sdir = 'models/' # directory to save and load models
 ################################### configuration: 
 #### load previous model or start from scratch?
 save_nm = None # this results in the optimization starting from scratch (comment out line below)
+save_nm = 'go_kfacs_0.2500EPS_7GMSZ_150N_SIM_20N_TURNS_128N_FILTERS_5N_LAYERS_2N_BATCH_SETS.npy'
 
 ###### variables to save
 save_vars = ['POL_CROSS_ENTROP_LAMBDA', 'VAL_LAMBDA', 
@@ -67,7 +68,7 @@ if save_nm is None:
 	MOMENTUM = .9
 
 	N_SIM = 150 #100#300 # number of simulations at each turn
-	N_TURNS = 20#10#35 # number of moves per player per game
+	N_TURNS = 20 #10#35 # number of moves per player per game
 
 	#### training buffers
 	BUFFER_SZ = N_BATCH_SETS * N_TURNS * 2 * gv.BATCH_SZ
@@ -90,7 +91,7 @@ if save_nm is None:
 	start_time = datetime.now()
 	save_t = datetime.now()
 
-	save_nm = 'go_kfacs_%1.4fEPS_%iGMSZ_%iN_SIM_%iN_TURNS_%iN_FILTERS_%iN_LAYERS_%iN_BATCH_SETS.npy' % (EPS, gv.n_rows, N_SIM, N_TURNS, N_FILTERS[0], N_LAYERS, N_BATCH_SETS)
+	save_nm = 'go_kfacs_%1.4fEPS_%iGMSZ_%iN_SIM_%iN_TURNS_%iN_FILTERS_%iN_LAYERS_%iN_BATCH_SETS_dbg.npy' % (EPS, gv.n_rows, N_SIM, N_TURNS, N_FILTERS[0], N_LAYERS, N_BATCH_SETS)
 
 	boards = {}; scores = {} # eval
 	save_d = {}
@@ -213,8 +214,6 @@ dir_pre = 0
 #else:
 #	dir_pre = gamma(DIR_A * gv.map_szt) / (gamma(DIR_A)**gv.map_szt)
 
-inds_total = np.arange(BUFFER_SZ)
-
 err_denom = 0
 val_mean_sq_err = 0; pol_cross_entrop_err = 0; val_pearsonr = 0
 
@@ -279,9 +278,10 @@ while True:
 
 	#############################
 	# train
-	random.shuffle(inds_total)
+	inds_valid = np.nonzero(tree_probs.reshape((BUFFER_SZ, gv.map_szt)).sum(1))[0]
+	random.shuffle(inds_valid)
 	for batch in range(N_TURNS):
-		inds = inds_total[batch*gv.BATCH_SZ + np.arange(gv.BATCH_SZ)]
+		inds = inds_valid[batch*gv.BATCH_SZ + np.arange(gv.BATCH_SZ)]
 		
 		board2, tree_probs2 = pu.rotate_reflect_imgs(board[inds], tree_probs.reshape((BUFFER_SZ, gv.map_szt))[inds]) # rotate and reflect board randomly
 
