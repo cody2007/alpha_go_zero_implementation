@@ -20,7 +20,8 @@ sdir = 'models/' # directory to save and load models
 ################################### configuration: 
 #### load previous model or start from scratch?
 save_nm = None # this results in the optimization starting from scratch (comment out line below)
-save_nm = 'go_kfacs_0.2500EPS_7GMSZ_150N_SIM_20N_TURNS_128N_FILTERS_5N_LAYERS_2N_BATCH_SETS.npy'
+#save_nm = 'go_kfacs_0.2500EPS_7GMSZ_150N_SIM_20N_TURNS_128N_FILTERS_5N_LAYERS_2N_BATCH_SETS.npy'
+save_nm = 'go_kfacs_0.2500EPS_7GMSZ_500N_SIM_20N_TURNS_128N_FILTERS_5N_LAYERS_5N_BATCH_SETS_dbg.npy'
 
 ###### variables to save
 save_vars = ['POL_CROSS_ENTROP_LAMBDA', 'VAL_LAMBDA', 
@@ -49,7 +50,7 @@ if save_nm is None:
 	VAL_LAMBDA = .025 #.05
 	DIR_A = 0
 	CPUCT = 1
-	N_BATCH_SETS = 2 # number of batch sets to store in training buffer
+	N_BATCH_SETS = 5 # number of batch sets to store in training buffer
 
 	batch_set = 0
 	batch_sets_created = 0
@@ -67,7 +68,7 @@ if save_nm is None:
 	EPS = .25 # backprop step size
 	MOMENTUM = .9
 
-	N_SIM = 150 #100#300 # number of simulations at each turn
+	N_SIM = 500 #100#300 # number of simulations at each turn
 	N_TURNS = 20 #10#35 # number of moves per player per game
 
 	#### training buffers

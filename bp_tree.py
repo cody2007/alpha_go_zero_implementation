@@ -20,7 +20,6 @@ sdir = 'models/' # directory to save and load models
 ################################### configuration: 
 #### load previous model or start from scratch?
 save_nm = None # this results in the optimization starting from scratch (comment out line below)
-save_nm = 'go_0.2000EPS_7GMSZ_300N_SIM_35N_TURNS_128N_FILTERS_5N_LAYERS_3N_BATCH_SETS_EPS0.020000.npy'
 
 ###### variables to save
 save_vars = ['LSQ_LAMBDA', 'LSQ_REG_LAMBDA', 'POL_CROSS_ENTROP_LAMBDA', 'VAL_LAMBDA', 'VALR_LAMBDA', 'L2_LAMBDA',
@@ -53,7 +52,7 @@ if save_nm is None:
 	L2_LAMBDA = 1e-3 # weight regularization 
 	DIR_A = 0
 	CPUCT = 1
-	N_BATCH_SETS = 3 # number of batch sets to store in training buffer
+	N_BATCH_SETS = 5 # number of batch sets to store in training buffer
 
 	batch_set = 0
 	batch_sets_created = 0
@@ -71,7 +70,7 @@ if save_nm is None:
 	EPS = 2e-1 # backprop step size
 	MOMENTUM = .9
 
-	N_SIM = 300 # number of simulations at each turn
+	N_SIM = 1000 # number of simulations at each turn
 	N_TURNS = 35 # number of moves per player per game
 
 	#### training buffers
@@ -218,8 +217,6 @@ dir_pre = 0
 #else:
 #	dir_pre = gamma(DIR_A * gv.map_szt) / (gamma(DIR_A)**gv.map_szt)
 
-inds_total = np.arange(BUFFER_SZ)
-
 err_denom = 0
 val_mean_sq_err = 0; pol_cross_entrop_err = 0; val_pearsonr = 0
 
@@ -283,10 +280,15 @@ while True:
 
 	#############################
 	# train
-	random.shuffle(inds_total)
+	tree_probs_r = tree_probs.reshape((BUFFER_SZ, gv.map_szt))
+	valid_entries = np.prod(np.isnan(tree_probs_r) == False, 1) * np.nansum(tree_probs_r, 1) # remove examples with nans or no probabilties
+	inds_valid = np.nonzero(valid_entries)[0]
+	print len(inds_valid), 'out of', BUFFER_SZ, 'valid training examples'
+
+	random.shuffle(inds_valid)
 	for batch in range(N_TURNS):
-		inds = inds_total[batch*gv.BATCH_SZ + np.arange(gv.BATCH_SZ)]
-		
+		inds = inds_valid[batch*gv.BATCH_SZ + np.arange(gv.BATCH_SZ)]
+
 		board2, tree_probs2 = pu.rotate_reflect_imgs(board[inds], tree_probs.reshape((BUFFER_SZ, gv.map_szt))[inds]) # rotate and reflect board randomly
 
 		train_dict = {arch.imgs: board2,
