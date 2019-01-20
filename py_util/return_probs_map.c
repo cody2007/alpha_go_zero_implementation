@@ -6,6 +6,18 @@ static PyObject *return_probs_map(PyObject *self, PyObject *args){
 	
 	ASSERT(N_TURNS > 0, "N_TURNS must be > 0")
 
+	//////// dbg
+	int max_tree_sz = tree_sz[0];
+	int max_list_sz = list_sz[0];
+	for(int gm = 1; gm < BATCH_SZ; gm++){
+		if(max_tree_sz < tree_sz[gm])
+			max_tree_sz = tree_sz[gm];
+		if(max_list_sz < list_sz[gm])
+			max_list_sz = list_sz[gm];
+	}
+	printf("max tree_sz: %i, list_sz %i\n", max_tree_sz, max_list_sz);
+	////////
+
 	///// output
 	npy_intp dims[3];
 	dims[0] = N_TURNS * N_PLAYERS * BATCH_SZ;

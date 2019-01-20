@@ -32,7 +32,7 @@ for key in save_vars:
 	exec('%s = save_d["%s"]' % (key,key))
 
 ########## over-write number of simulations previously used:
-N_SIM = 100#0
+N_SIM = 1000
 
 CPUCT = 1
 if DIR_A == 0:
@@ -263,6 +263,9 @@ draw(update=True)
 board = nn_mv()
 draw(update=True)
 
+pygame.mixer.music.load('/home/tapa/gtr-nylon22.mp3')
+pygame.mixer.music.play()
+
 while True:
 	event = pygame.event.wait()
 
@@ -294,7 +297,9 @@ while True:
 		board = nn_mv()
 		draw(update=True)
 		turn += 1
-		
+	
+		pygame.mixer.music.play()
+	
 		win_tmp, score_tmp = arch.sess.run([arch.winner, arch.score], feed_dict={arch.moving_player: 1})
 		print 'turn %i, winner %i, score %i' % (turn, win_tmp[0], score_tmp[0])
 
