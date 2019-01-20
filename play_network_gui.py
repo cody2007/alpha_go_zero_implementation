@@ -276,8 +276,7 @@ while True:
 		board_prev = arch.sess.run(arch.gm_vars['board'])[0]
 
 		imgs, valid_mv_map = arch.sess.run([arch.imgs, arch.valid_mv_map], feed_dict={arch.moving_player: 1})
-		pu.add_valid_mvs(1, valid_mv_map) # register valid moves in tree
-
+		
 		arch.sess.run(arch.nn_max_move_unit, feed_dict={arch.moving_player: 1, arch.nn_max_to_coords: to_coords_manual})
 
 		board = arch.sess.run(arch.gm_vars['board'])[0]
@@ -285,6 +284,7 @@ while True:
 			print 'invalid mv'
 			continue
 		
+		pu.add_valid_mvs(1, valid_mv_map) # register valid moves in tree
 		pu.register_mv(1, to_coords_manual)
 
 		win_tmp, score_tmp = arch.sess.run([arch.winner, arch.score], feed_dict={arch.moving_player: 1})
