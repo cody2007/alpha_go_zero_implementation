@@ -21,6 +21,8 @@ static PyObject *register_mv(PyObject *self, PyObject *args){
 	///////////////////////////////
 
 	for(int gm = 0; gm < BATCH_SZ; gm++){
+		if(chosen_coord[gm] == -1) continue;
+
 		CUR_TREE_INDS	
 		
 		// find list index for chosen move
@@ -34,10 +36,10 @@ static PyObject *register_mv(PyObject *self, PyObject *args){
 			break;
 		}
 		
-		/*if(found == 0){
+		if(found == 0){
 			printf("could not find valid move: gm %i chosen_coord %i\n", gm, chosen_coord[gm]);
-			LOC = LO;
-		}*/
+			//LOC = LO;
+		}
 		ASSERT(found != 0, "could not find move");
 
 		// update pointer to tree_start

@@ -12,7 +12,8 @@ import py_util.py_util as pu
 
 ########################################################## configuration:
 #save_nm = 'models/go_cpu_tree_0.200000EPS_7GMSZ_1000N_SIM_0.001000L2_LAMBDA_0.900000MOMENTUM_0.025000VAL_LAMBDA_1.000000CPUCT_20N_TURNS_128N_FILTERS_EPS0.110000_EPS0.020000.npy'
-save_nm = 'models/go_cpu_tree_0.200000EPS_7GMSZ_1000N_SIM_0.001000L2_LAMBDA_0.900000MOMENTUM_0.025000VAL_LAMBDA_1.000000CPUCT_20N_TURNS_128N_FILTERS_EPS0.110000_EPS0.020000_EPS0.010000.npy'
+#save_nm = 'models/go_cpu_tree_0.200000EPS_7GMSZ_1000N_SIM_0.001000L2_LAMBDA_0.900000MOMENTUM_0.025000VAL_LAMBDA_1.000000CPUCT_20N_TURNS_128N_FILTERS_EPS0.110000_EPS0.020000_EPS0.010000.npy'
+save_nm = 'models/go_0.2000EPS_7GMSZ_1000N_SIM_35N_TURNS_128N_FILTERS_5N_LAYERS_5N_BATCH_SETS.npy'
 # ^ set save_nm = None if you want to start training a new model
 
 #run_net = True # run only the network (no tree search)
@@ -31,7 +32,7 @@ for key in save_vars:
 	exec('%s = save_d["%s"]' % (key,key))
 
 ########## over-write number of simulations previously used:
-N_SIM = 1000
+N_SIM = 100#0
 
 CPUCT = 1
 if DIR_A == 0:
@@ -73,12 +74,12 @@ def ret_stats(player): # return Q map, P map, and visit count maps
 
 # move neural network
 def nn_mv():
-	global Q_map, P_map, visit_count_map
-	global Q_map_next, P_map_next, visit_count_map_next
+	global Q_map, P_map, visit_count_map, valid_mv_map, pol
+	global Q_map_next, P_map_next, visit_count_map_next, to_coords
 	
 	t_start = time.time()
 	arch.sess.run(arch.session_backup)
-	pu.init_tree()
+	#pu.init_tree()
 	pu.session_backup()
 
 	if run_net:
@@ -90,7 +91,7 @@ def nn_mv():
 		Q_map, P_map, visit_count_map = ret_stats(0)
 	else:
 		for sim in range(N_SIM):
-			# initial moves
+			'''# initial moves
 			for player in [0,1]:
 				valid_mv_map, pol = arch.sess.run([arch.valid_mv_map, arch.pol], feed_dict=ret_d(player))
 
@@ -98,13 +99,15 @@ def nn_mv():
 				to_coords = pu.choose_moves(player, pol, CPUCT)[0]
 				pu.register_mv(player, to_coords)
 
-				arch.sess.run(arch.move_frm_inputs, feed_dict={arch.moving_player: player, arch.to_coords_input: to_coords})
+				arch.sess.run(arch.move_frm_inputs, feed_dict={arch.moving_player: player, arch.to_coords_input: to_coords})'''
+			
 			# backup then make next move
-			for turn_sim in range(turn, N_TURNS):
+			for turn_sim in range(turn, N_TURNS+1):
 				for player in [0,1]:
 					valid_mv_map, pol, val = arch.sess.run([arch.valid_mv_map, arch.pol, arch.val], feed_dict=ret_d(player))
 
-					pu.backup_visit(player, val)
+					if turn_sim != turn:
+						pu.backup_visit(player, val)
 
 					pu.add_valid_mvs(player, valid_mv_map)
 					to_coords = pu.choose_moves(player, pol, CPUCT)[0]
@@ -179,7 +182,7 @@ blank = pygame.transform.scale(blank, window_sz)
 
 
 centers = np.arange(gv.n_rows)*psz + pszh
-to_coords = -np.ones(gv.BATCH_SZ, dtype='int32')
+to_coords_manual = -np.ones(gv.BATCH_SZ, dtype='int32')
 
 board = np.zeros((gv.n_rows, gv.n_cols), dtype='int8')
 
@@ -268,12 +271,16 @@ while True:
 		x = np.argmin((mouse_pos[0] - centers)**2)
 		y = np.argmin((mouse_pos[1] - centers)**2)
 	
-		to_coords[0] = x*gv.n_cols + y
+		to_coords_manual[0] = x*gv.n_cols + y
 	
 		board_prev = arch.sess.run(arch.gm_vars['board'])[0]
 
-		imgs = arch.sess.run(arch.imgs, feed_dict={arch.moving_player: 1})
-		arch.sess.run(arch.nn_max_move_unit, feed_dict={arch.moving_player: 1, arch.nn_max_to_coords: to_coords})
+		imgs, valid_mv_map = arch.sess.run([arch.imgs, arch.valid_mv_map], feed_dict={arch.moving_player: 1})
+		pu.add_valid_mvs(1, valid_mv_map) # register valid moves in tree
+
+		arch.sess.run(arch.nn_max_move_unit, feed_dict={arch.moving_player: 1, arch.nn_max_to_coords: to_coords_manual})
+
+		pu.register_mv(1, to_coords_manual)
 
 		board = arch.sess.run(arch.gm_vars['board'])[0]
 
