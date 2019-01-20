@@ -280,13 +280,12 @@ while True:
 
 		arch.sess.run(arch.nn_max_move_unit, feed_dict={arch.moving_player: 1, arch.nn_max_to_coords: to_coords_manual})
 
-		pu.register_mv(1, to_coords_manual)
-
 		board = arch.sess.run(arch.gm_vars['board'])[0]
-
 		if board_prev.sum() == board.sum(): # invalid move
 			print 'invalid mv'
 			continue
+		
+		pu.register_mv(1, to_coords_manual)
 
 		win_tmp, score_tmp = arch.sess.run([arch.winner, arch.score], feed_dict={arch.moving_player: 1})
 		print 'turn %i, winner %i, score %i' % (turn, win_tmp[0], score_tmp[0])
