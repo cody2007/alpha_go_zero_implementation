@@ -32,7 +32,7 @@ for key in save_vars:
 	exec('%s = save_d["%s"]' % (key,key))
 
 ########## over-write number of simulations previously used:
-N_SIM = 1000
+N_SIM = 1500 #1000
 
 CPUCT = 1
 if DIR_A == 0:
