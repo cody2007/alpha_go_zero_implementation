@@ -95,7 +95,7 @@ if save_nm is None:
 	start_time = datetime.now()
 	save_t = datetime.now()
 
-	save_nm = 'go_%1.4fEPS_%iGMSZ_%iN_SIM_%iN_TURNS_%iN_FILTERS_%iN_LAYERS_%iN_BATCH_SETS_fix_restore.npy' % (EPS, gv.n_rows, N_SIM, N_TURNS, N_FILTERS[0], N_LAYERS, N_BATCH_SETS)
+	save_nm = 'go_dbg_%1.4fEPS_%iGMSZ_%iN_SIM_%iN_TURNS_%iN_FILTERS_%iN_LAYERS_%iN_BATCH_SETS.npy' % (EPS, gv.n_rows, N_SIM, N_TURNS, N_FILTERS[0], N_LAYERS, N_BATCH_SETS)
 
 	boards = {}; scores = {} # eval
 	save_d = {}
@@ -221,6 +221,7 @@ dir_pre = 0
 err_denom = 0
 val_mean_sq_err = 0; pol_cross_entrop_err = 0; val_pearsonr = 0
 
+buffer_loc = 0
 init_buffers = 0
 t_start = datetime.now()
 run_time = datetime.now() - datetime.now()
@@ -257,6 +258,8 @@ while True:
 					arch.visit_count_map: visit_count_map, arch.dir_pre: dir_pre, arch.dir_a: DIR_A})[0] # make move in proportion to visit counts
 
 				pu.register_mv(player, to_coords) # register move in tree
+				
+				assert False
 
 				###############
 				
