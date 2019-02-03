@@ -224,7 +224,6 @@ dir_pre = 0
 err_denom = 0
 val_mean_sq_err = 0; pol_cross_entrop_err = 0; val_pearsonr = 0
 
-buffer_loc = 0
 init_buffers = 0
 t_start = datetime.now()
 run_time = datetime.now() - datetime.now()
