@@ -21,6 +21,7 @@ sdir = 'models/' # directory to save and load models
 #### load previous model or start from scratch?
 save_nm = None # this results in the optimization starting from scratch (comment out line below)
 #save_nm = 'go_0.2000EPS_7GMSZ_1000N_SIM_35N_TURNS_128N_FILTERS_5N_LAYERS_5N_BATCH_SETS.npy'
+save_nm = 'go_0.2000EPS_7GMSZ_1000N_SIM_35N_TURNS_128N_FILTERS_5N_LAYERS_5N_BATCH_SETS_fix_restore.npy'
 
 ###### variables to save
 save_vars = ['LSQ_LAMBDA', 'LSQ_REG_LAMBDA', 'POL_CROSS_ENTROP_LAMBDA', 'VAL_LAMBDA', 'VALR_LAMBDA', 'L2_LAMBDA',
