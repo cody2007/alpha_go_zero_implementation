@@ -5,7 +5,7 @@ sys.path.append("..")
 import global_vars as gv
 import os
 
-DEVICE = '/gpu:1'
+DEVICE = '/gpu:0'
 
 hdir = os.getenv('HOME')
 
