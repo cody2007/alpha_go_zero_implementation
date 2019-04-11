@@ -80,7 +80,8 @@ if save_nm is None:
 
 	board = np.zeros((BUFFER_SZ, gv.n_rows, gv.n_cols, gv.n_input_channels),  dtype='single')
 	winner = np.zeros((N_BATCH_SETS, N_TURNS, 2, gv.BATCH_SZ), dtype='single')
-	tree_probs = np.zeros((N_BATCH_SETS, BUFFER_SZ/N_BATCH_SETS, gv.map_szt), dtype='single')
+	#tree_probs = np.zeros((N_BATCH_SETS, BUFFER_SZ/N_BATCH_SETS, gv.map_szt), dtype='single')
+	tree_probs = np.zeros((BUFFER_SZ, gv.map_szt), dtype='single')
 
 	##### number of batch evaluations for testing model
 	N_EVAL_NN_GMS = 1 # model evaluation for printing
@@ -254,6 +255,8 @@ while True:
 				pu.add_valid_mvs(player, valid_mv_map) # register valid moves in tree
 				visit_count_map = pu.choose_moves(player, pol, CPUCT)[-1] # get number of times each node was visited
 				
+				tree_probs[inds] = visit_count_map / visit_count_map.sum(1)[:,np.newaxis] # each map sums to one
+				
 				to_coords = arch.sess.run([arch.tree_prob_visit_coord, arch.tree_prob_move_unit], feed_dict={arch.moving_player: player, 
 					arch.visit_count_map: visit_count_map, arch.dir_pre: dir_pre, arch.dir_a: DIR_A})[0] # make move in proportion to visit counts
 
@@ -272,7 +275,7 @@ while True:
 		##### create prob maps
 		for player in [0,1]:
 			winner[batch_set, :, player] = arch.sess.run(arch.winner, feed_dict={arch.moving_player: player})
-		tree_probs[batch_set] = pu.return_probs_map(N_TURNS)
+		#tree_probs[batch_set] = pu.return_probs_map(N_TURNS)
 
 		batch_set += 1
 		batch_sets_created += 1
@@ -281,8 +284,7 @@ while True:
 
 	#############################
 	# train
-	tree_probs_r = tree_probs.reshape((BUFFER_SZ, gv.map_szt))
-	valid_entries = np.prod(np.isnan(tree_probs_r) == False, 1) * np.nansum(tree_probs_r, 1) # remove examples with nans or no probabilties
+	valid_entries = np.prod(np.isnan(tree_probs) == False, 1) * np.nansum(tree_probs, 1) # remove examples with nans or no probabilties
 	inds_valid = np.nonzero(valid_entries)[0]
 	print len(inds_valid), 'out of', BUFFER_SZ, 'valid training examples'
 
@@ -290,7 +292,7 @@ while True:
 	for batch in range(N_TURNS):
 		inds = inds_valid[batch*gv.BATCH_SZ + np.arange(gv.BATCH_SZ)]
 
-		board2, tree_probs2 = pu.rotate_reflect_imgs(board[inds], tree_probs.reshape((BUFFER_SZ, gv.map_szt))[inds]) # rotate and reflect board randomly
+		board2, tree_probs2 = pu.rotate_reflect_imgs(board[inds], tree_probs[inds]) # rotate and reflect board randomly
 
 		train_dict = {arch.imgs: board2,
 				arch.pol_target: tree_probs2,
