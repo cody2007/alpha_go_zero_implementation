@@ -13,7 +13,7 @@
 #define MAP_SZ (MAP_SZ_X*MAP_SZ_Y)
 #define BATCH_MAP_SZ (BATCH_SZ*MAP_SZ_X*MAP_SZ_Y)
 
-#define MAP_LOOP for(int loc = 0; loc < MAP_SZ; loc++)
+#define MAP_LOOP for(int16_t loc = 0; loc < MAP_SZ; loc++)
 
 #define N_INPUT_CHANNELS 3
 

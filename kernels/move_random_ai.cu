@@ -1,4 +1,4 @@
-__global__ void move_random_ai_kernel(int * to_coord, char * board, curandState_t* rand_states, char * valid_mv_map_internal){
+__global__ void move_random_ai_kernel(int16_t * to_coord, char * board, curandState_t* rand_states, char * valid_mv_map_internal){
 	
 	int gm = blockIdx.x;
 	int gm_offset = gm*MAP_SZ;
@@ -14,7 +14,7 @@ __global__ void move_random_ai_kernel(int * to_coord, char * board, curandState_
 
 }
 
-void move_random_ai_launcher(int * moving_player){
+void move_random_ai_launcher(int8_t * moving_player){
 	cudaError_t err;
 	REQ_INIT
 

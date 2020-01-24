@@ -4,11 +4,11 @@
 // valid_mv_map = [gv.BATCH_SZ, gv.n_rows, gv.n_cols]
 
 // create batch (for nn) from current game state
-__global__ void create_batch_kernel(float * imgs, char * board, char * board_prev, char * board_pprev, int * moving_player, char * valid_mv_map,
+__global__ void create_batch_kernel(half * imgs, char * board, char * board_prev, char * board_pprev, int8_t * moving_player, char * valid_mv_map,
 		char * valid_mv_map_internal){
 	
 	int32_t gm = blockIdx.x;
-	int32_t map_coord = threadIdx.x;
+	int16_t map_coord = threadIdx.x;
 	int game_offset = gm*MAP_SZ;
 	int gcoord = game_offset + map_coord;
 
@@ -41,7 +41,7 @@ __global__ void create_batch_kernel(float * imgs, char * board, char * board_pre
 
 	//////////// valid moves
 	// adj search vars
-	int coord_stack[MAP_SZ];
+	int16_t coord_stack[MAP_SZ];
 	int coord_stack_sz;
 
 	__syncthreads();
@@ -94,20 +94,24 @@ __global__ void create_batch_kernel(float * imgs, char * board, char * board_pre
 			continue;
 
 		////// does this replicate a prior state?
-		char matching = 1;
+		char matching = 1, matching2 = 1;
 		for(int loc = 0; matching && (loc < MAP_SZ); loc++){
 			matching = board_pprev[game_offset + loc] == board_tmp[loc];
 		}
+		for(int loc = 0; matching2 && (loc < MAP_SZ); loc++){
+			matching2 = board_prev[game_offset + loc] == board_tmp[loc];
+		}
 
-		if(matching == 0) ADD_MV 
+		if(matching == 0 && matching2 == 0) ADD_MV 
 
 	} // map loop
 }
 
-void create_batch_launcher(float * imgs, int * moving_player, char * valid_mv_map){
+void create_batch_launcher(float * imgs, int8_t * moving_player, char * valid_mv_map){
 	REQ_INIT
 
-	create_batch_kernel <<< BATCH_SZ, MAP_SZ >>> (imgs, board, board_prev, board_pprev, moving_player, valid_mv_map, valid_mv_map_internal);
+	create_batch_kernel <<< BATCH_SZ, MAP_SZ >>> ((half*)imgs, board, board_prev, board_pprev, moving_player, valid_mv_map, valid_mv_map_internal);
 
 	VERIFY_BUFFER_INTEGRITY
 }
+

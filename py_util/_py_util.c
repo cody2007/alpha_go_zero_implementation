@@ -5,7 +5,6 @@
 #include "init_tree.c"
 #include "add_valid_mvs.c"
 #include "register_mv.c"
-#include "return_probs_map.c"
 #include "backup_visit.c"
 #include "prune_tree.c"
 #include "choose_moves.c"
@@ -17,7 +16,6 @@ static PyMethodDef py_util[] = {
 	{"init_tree", init_tree, METH_VARARGS},
 	{"add_valid_mvs", add_valid_mvs, METH_VARARGS},
 	{"register_mv", register_mv, METH_VARARGS},
-	{"return_probs_map", return_probs_map, METH_VARARGS},
 	{"backup_visit", backup_visit, METH_VARARGS},
 	{"prune_tree", prune_tree, METH_VARARGS},
 	{"choose_moves", choose_moves, METH_VARARGS},

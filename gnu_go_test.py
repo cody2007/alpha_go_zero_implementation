@@ -6,6 +6,7 @@ from os import O_NONBLOCK, read
 import global_vars as gv
 import numpy as np
 
+LEVEL = 1#0
 PAUSE = .001
 row_nm = 'ABCDEFGHIJKLMNOP'
 colors = 'BW'
@@ -13,7 +14,7 @@ f = [None]*gv.BATCH_SZ
 
 ### start gnugo
 for gm in range(gv.BATCH_SZ):
-	f[gm] = sp.Popen(['gnugo', '--chinese-rules', '--seed', str(gm+1), '--play-out-aftermath', '--capture-all-dead', '--no-ko', '--never-resign', '--mode','gtp','--boardsize',str(gv.n_rows)], stdout=sp.PIPE, stdin=sp.PIPE)
+	f[gm] = sp.Popen(['gnugo', '--chinese-rules', '--seed', str(gm+1), '--play-out-aftermath', '--capture-all-dead', '--no-ko', '--never-resign', '--mode','gtp','--boardsize',str(gv.n_rows),'--level', str(LEVEL)], stdout=sp.PIPE, stdin=sp.PIPE)
 	flags = fcntl(f[gm].stdout, F_GETFL) # get current p.stdout flags
 	fcntl(f[gm].stdout, F_SETFL, flags | O_NONBLOCK)
 
@@ -51,8 +52,10 @@ def init_board(board):
 
 def move_nn(to_coords, moving_player=0):
 	passes = to_coords == -1
-	to_coords[passes] = 0
-	i, j = np.unravel_index(to_coords, (gv.n_rows, gv.n_cols))
+	to_coords_i = np.array(to_coords)
+	to_coords_i[passes] = 0
+
+	i, j = np.unravel_index(to_coords_i, (gv.n_rows, gv.n_cols))
 	for gm in range(gv.BATCH_SZ):
 		#req_ok_or_illegal(gm, 'play %s %s%i\n' % (colors[moving_player], row_nm[j[gm]], gv.n_rows - i[gm]))
 		if passes[gm]:

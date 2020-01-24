@@ -10,23 +10,18 @@ using namespace tensorflow;
 
 // return coordinate from probability map, proportionate to probabiltiies
 REGISTER_OP("ProbToCoord")
-	.Input("prob_map: float") // [BATCH_SZ, MAP_SZ]
-	.Input("dir_pre: float")
-	.Input("dir_a: float")
-	.Output("to_coord: int32");
+	.Input("prob_map: float16") // [BATCH_SZ, MAP_SZ]
+	.Output("to_coord: int16");
 
 // return coordinate from probability map, proportionate to probabiltiies, restricted to only valid mvs
 REGISTER_OP("ProbToCoordValidMvs")
-	.Input("prob_map: float")
-	.Output("to_coord: int32");
+	.Input("prob_map: float16")
+	.Output("to_coord: int16");
 
 // return max coordinate from probability map, restricted to only valid mvs
 REGISTER_OP("MaxProbToCoordValidMvs")
-	.Input("prob_map: float")
-	.Output("to_coord: int32");
-
-REGISTER_OP("ReturnProbsMap")
-	.Output("probs_map: float"); // [N_TURNS, N_PLAYERS, BATCH_SZ, MAP_SZ_X, MAP_SZ_Y]
+	.Input("prob_map: float16")
+	.Output("to_coord: int16");
 
 #define CREATE_BATCH_SHAPES tensorflow::TensorShape imgs_shape, valid_mv_map_shape;\
 		imgs_shape.AddDim(BATCH_SZ);\
@@ -39,8 +34,8 @@ REGISTER_OP("ReturnProbsMap")
 		valid_mv_map_shape.AddDim(MAP_SZ_Y);
 	
 REGISTER_OP("CreateBatch")
-	.Input("moving_player: int32") // [1]
-	.Output("imgs: float")
+	.Input("moving_player: int8") // [1]
+	.Output("imgs: float16")
 	.Output("valid_mv_map: int8")
 
 	.SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
@@ -63,10 +58,10 @@ REGISTER_OP("CreateBatch")
 		n_captures_shape.AddDim(BATCH_SZ);
 
 REGISTER_OP("ReturnWinner")
-	.Input("moving_player: int32") // [1]
-	.Output("winner: float")
-	.Output("score: float")
-	.Output("n_captures: int32")
+	.Input("moving_player: int8") // [1]
+	.Output("winner: int8")
+	.Output("score: int16")
+	.Output("n_captures: int16")
 
 	.SetShapeFn([](::tensorflow::shape_inference::InferenceContext* c) {
 		RETURN_WINNER_SHAPES
@@ -90,25 +85,25 @@ REGISTER_OP("EndTurn");
 REGISTER_OP("SessionBackup");
 REGISTER_OP("SessionRestore");
 REGISTER_OP("MoveRandomAi")
-	.Input("moving_player: int32"); // [1]
+	.Input("moving_player: int8"); // [1]
 
 REGISTER_OP("MoveUnit")
-	.Input("to_coord: int32")
-	.Input("moving_player: int32") // [1]
+	.Input("to_coord: int16")
+	.Input("moving_player: int8") // [1]
 	.Output("moved: int8"); // [BATCH_SZ]
 
-void prob_to_coord_launcher(float * prob_map, int * to_coord, float * dir_pre, float * dir_a);
-void prob_to_coord_valid_mvs_launcher(float * prob_map, int * to_coord);
-void max_prob_to_coord_valid_mvs_launcher(float * prob_map, int * to_coord);
+void prob_to_coord_launcher(float * prob_map, int16_t * to_coord);
+void prob_to_coord_valid_mvs_launcher(float * prob_map, int16_t * to_coord);
+void max_prob_to_coord_valid_mvs_launcher(float * prob_map, int16_t * to_coord);
 
 void session_backup_launcher();
 void session_restore_launcher();
 void return_inputs_launcher(float* out);
 void init_state_launcher();
-void move_random_ai_launcher(int32_t * moving_player);
-void create_batch_launcher(float * imgs, int * moving_player, char * valid_mv_map);
-void move_unit_launcher(int * to_coord, int* moving_player, char *moved);
-void return_winner_launcher(float * winner, int *moving_player, float * score, int * n_captures_out);
+void move_random_ai_launcher(int8_t * moving_player);
+void create_batch_launcher(float * imgs, int8_t * moving_player, char * valid_mv_map);
+void move_unit_launcher(int16_t * to_coord, int8_t * moving_player, char *moved);
+void return_winner_launcher(int8_t * winner, int8_t *moving_player, int16_t * score, int16_t * n_captures_out);
 
 class session_backup : public OpKernel {
 	public:
@@ -135,24 +130,14 @@ class prob_to_coord : public OpKernel {
 	void Compute(OpKernelContext* context) override {
 		/////////////////////////////////// inputs
     		const Tensor& prob_map_tensor = context->input(0);
-		const Tensor& dir_pre_tensor = context->input(1);
-		const Tensor& dir_a_tensor = context->input(2);
 
-		auto prob_map = prob_map_tensor.flat<float>();
-		auto dir_pre = dir_pre_tensor.flat<float>();
-		auto dir_a = dir_a_tensor.flat<float>();
+		auto prob_map = prob_map_tensor.flat<Eigen::half>();
 
 		// check dims
 		TensorShape prob_map_shape = prob_map_tensor.shape();
 		ASSERT(prob_map_shape.dims() == 2, "number of dims not correct")
 		ASSERT(prob_map_shape.dim_size(0) == BATCH_SZ, "incorrect input size")
 		ASSERT(prob_map_shape.dim_size(1) == MAP_SZ, "incorrect input size")
-
-		TensorShape dir_pre_shape = dir_pre_tensor.shape();
-		ASSERT(dir_pre_shape.dims() == 0, "number of dims not correct")
-
-		TensorShape dir_a_shape = dir_a_tensor.shape();
-		ASSERT(dir_a_shape.dims() == 0, "number of dims not correct")
 
 		////////////////////////////////////// outputs
 		Tensor* to_coord_tensor = nullptr;
@@ -162,11 +147,10 @@ class prob_to_coord : public OpKernel {
 
 		OP_REQUIRES_OK(context, context->allocate_output(0, to_coord_shape, &to_coord_tensor));
 
-		auto to_coord = to_coord_tensor->template flat<int32>();
+		auto to_coord = to_coord_tensor->template flat<int16>();
 
 		///////////////////
-		prob_to_coord_launcher((float*)prob_map.data(), (int*)to_coord.data(),
-			(float*)dir_pre.data(), (float*)dir_a.data());
+		prob_to_coord_launcher((float*)prob_map.data(), (int16_t*)to_coord.data());
 	}
 };
 
@@ -177,7 +161,7 @@ class prob_to_coord_valid_mvs : public OpKernel {
 	void Compute(OpKernelContext* context) override {
 		/////////////////////////////////// inputs
     		const Tensor& prob_map_tensor = context->input(0);
-		auto prob_map = prob_map_tensor.flat<float>();
+		auto prob_map = prob_map_tensor.flat<Eigen::half>();
 
 		// check dims
 		TensorShape prob_map_shape = prob_map_tensor.shape();
@@ -193,10 +177,10 @@ class prob_to_coord_valid_mvs : public OpKernel {
 
 		OP_REQUIRES_OK(context, context->allocate_output(0, to_coord_shape, &to_coord_tensor));
 
-		auto to_coord = to_coord_tensor->template flat<int32>();
+		auto to_coord = to_coord_tensor->template flat<int16_t>();
 
 		///////////////////
-		prob_to_coord_valid_mvs_launcher((float*)prob_map.data(), (int*)to_coord.data());
+		prob_to_coord_valid_mvs_launcher((float*)prob_map.data(), (int16_t*)to_coord.data());
 	}
 };
 
@@ -207,7 +191,7 @@ class max_prob_to_coord_valid_mvs : public OpKernel {
 	void Compute(OpKernelContext* context) override {
 		/////////////////////////////////// inputs
     		const Tensor& prob_map_tensor = context->input(0);
-		auto prob_map = prob_map_tensor.flat<float>();
+		auto prob_map = prob_map_tensor.flat<Eigen::half>();
 
 		// check dims
 		TensorShape prob_map_shape = prob_map_tensor.shape();
@@ -223,10 +207,10 @@ class max_prob_to_coord_valid_mvs : public OpKernel {
 
 		OP_REQUIRES_OK(context, context->allocate_output(0, to_coord_shape, &to_coord_tensor));
 
-		auto to_coord = to_coord_tensor->template flat<int32>();
+		auto to_coord = to_coord_tensor->template flat<int16_t>();
 
 		///////////////////
-		max_prob_to_coord_valid_mvs_launcher((float*)prob_map.data(), (int*)to_coord.data());
+		max_prob_to_coord_valid_mvs_launcher((float*)prob_map.data(), (int16_t*)to_coord.data());
 	}
 };
 
@@ -237,7 +221,7 @@ class return_winner : public OpKernel {
 	void Compute(OpKernelContext* context) override {
 		/////////////////////////////////// inputs
     		const Tensor& moving_player_tensor = context->input(0);
-		auto moving_player = moving_player_tensor.flat<int32>();
+		auto moving_player = moving_player_tensor.flat<int8>();
 
 		// check dims
 		TensorShape moving_player_shape = moving_player_tensor.shape();
@@ -251,12 +235,12 @@ class return_winner : public OpKernel {
 		OP_REQUIRES_OK(context, context->allocate_output(1, score_shape, &score_tensor));
 		OP_REQUIRES_OK(context, context->allocate_output(2, n_captures_shape, &n_captures_tensor));
 
-		auto winner = winner_tensor->template flat<float>();
-		auto score = score_tensor->template flat<float>();
-		auto n_captures = n_captures_tensor->template flat<int32>();
+		auto winner = winner_tensor->template flat<int8_t>();
+		auto score = score_tensor->template flat<int16_t>();
+		auto n_captures = n_captures_tensor->template flat<int16>();
 
 		///////////////////
-		return_winner_launcher(winner.data(), (int*)moving_player.data(), score.data(), (int*)n_captures.data());
+		return_winner_launcher((int8_t*)winner.data(), (int8_t*)moving_player.data(), (int16_t*)score.data(), (int16_t*)n_captures.data());
 	}
 };
 
@@ -269,8 +253,8 @@ class move_unit : public OpKernel {
 		const Tensor& to_coord_tensor = context->input(0);
     		const Tensor& moving_player_tensor = context->input(1);
 
-		auto to_coord = to_coord_tensor.flat<int32>();
-		auto moving_player = moving_player_tensor.flat<int32>();
+		auto to_coord = to_coord_tensor.flat<int16>();
+		auto moving_player = moving_player_tensor.flat<int8>();
 
 		// check dims
 		TensorShape to_map_shape = to_coord_tensor.shape();
@@ -291,7 +275,7 @@ class move_unit : public OpKernel {
 		auto moved = moved_tensor->template flat<int8>();
 
 		///////////////////
-		move_unit_launcher((int*)to_coord.data(), (int*)moving_player.data(), (char*)moved.data());
+		move_unit_launcher((int16_t*)to_coord.data(), (int8_t*)moving_player.data(), (char*)moved.data());
 	}
 };
 
@@ -302,7 +286,7 @@ class create_batch : public OpKernel {
 	void Compute(OpKernelContext* context) override {
 		///////////////////////////////////// inputs
 		const Tensor& moving_player_tensor = context->input(0);
-		auto moving_player = moving_player_tensor.flat<int32>();
+		auto moving_player = moving_player_tensor.flat<int8>();
 	
 		// check dims
 		TensorShape moving_player_shape = moving_player_tensor.shape();
@@ -316,11 +300,11 @@ class create_batch : public OpKernel {
 		OP_REQUIRES_OK(context, context->allocate_output(0, imgs_shape, &imgs_tensor));
 		OP_REQUIRES_OK(context, context->allocate_output(1, valid_mv_map_shape, &valid_mv_map_tensor));
 
-		auto imgs = imgs_tensor->template flat<float>();
+		auto imgs = imgs_tensor->template flat<Eigen::half>();
 		auto valid_mv_map = valid_mv_map_tensor->template flat<int8>();
 
 		///////////////////
-		create_batch_launcher(imgs.data(), (int*)moving_player.data(), 
+		create_batch_launcher((float*)imgs.data(), (int8_t*)moving_player.data(), 
 			(char *)valid_mv_map.data());
 	}
 };
@@ -342,13 +326,13 @@ class move_random_ai : public OpKernel {
 		///////////////////////////////////// inputs
 		const Tensor& moving_player_tensor = context->input(0);
 
-    		auto moving_player = moving_player_tensor.flat<int32>();
+    		auto moving_player = moving_player_tensor.flat<int8>();
 
 		// check dims
 		TensorShape moving_player_shape = moving_player_tensor.shape();
 		ASSERT(moving_player_shape.dims() == 0, "number of dims not correct")
 
-		move_random_ai_launcher((int32_t *)moving_player.data());
+		move_random_ai_launcher((int8_t *)moving_player.data());
 	}
 };
 

@@ -15,7 +15,7 @@
 			int coord_i = coord_px*MAP_SZ_Y + coord_py;\
 
 
-__device__ inline int add_adj_to_stack(int coord, int * coord_stack, int coord_stack_sz, 
+__device__ inline int add_adj_to_stack(int16_t coord, int16_t * coord_stack, int coord_stack_sz, 
 		char * checked, char op_player_val, int game_offset, char * board){
 	DASSERT(coord >= 0 && coord < MAP_SZ);
 
@@ -41,8 +41,8 @@ __device__ inline int add_adj_to_stack(int coord, int * coord_stack, int coord_s
 		*coord_stack_sz, checked, PLAYER_VAL, game_offset, board);
 
 #define LIBERTY(COORD, PLAYER_VAL) return_liberty(COORD, PLAYER_VAL, game_offset, board, coord_stack, &coord_stack_sz)
-__device__ inline char return_liberty(int coord, int player_val, int game_offset, char * board,
-		int * coord_stack, int * coord_stack_sz){
+__device__ inline char return_liberty(int16_t coord, char player_val, int game_offset, char * board,
+		int16_t * coord_stack, int * coord_stack_sz){
 	char checked[MAP_SZ];
 
 	//////////// check if there exists a liberty for the placed stone
@@ -52,7 +52,7 @@ __device__ inline char return_liberty(int coord, int player_val, int game_offset
 	ADD_ADJ_TO_STACK(coord, player_val)
 
 	for(int stack_i = 0; stack_i < *coord_stack_sz; stack_i++){
-		int coord_j = coord_stack[stack_i];
+		int16_t coord_j = coord_stack[stack_i];
 		
 		DASSERT(coord_j >= 0 && coord_j < MAP_SZ)
 		DASSERT(board[game_offset + coord_j] == player_val)
@@ -64,7 +64,7 @@ __device__ inline char return_liberty(int coord, int player_val, int game_offset
 	return *coord_stack_sz == -1;
 }
 
-__global__ void move_unit_kernel(int *to_coord, int *moving_player, char * board, int * n_captures, char * moved, char * valid_mv_map_internal){
+__global__ void move_unit_kernel(int16_t *to_coord, int8_t *moving_player, char * board, int16_t * n_captures, char * moved, char * valid_mv_map_internal){
 	int gm = blockIdx.x;
 	int game_offset = gm * MAP_SZ;
 
@@ -76,7 +76,7 @@ __global__ void move_unit_kernel(int *to_coord, int *moving_player, char * board
 
 	GET_PLAYER_VAL
 
-	int coord = to_coord[gm];
+	int16_t coord = to_coord[gm];
 
 	// position not empty. shouldn't happen? (only when nn is making moves directly frm outputs)
 	if(board[game_offset + coord] != 0) return;
@@ -89,7 +89,7 @@ __global__ void move_unit_kernel(int *to_coord, int *moving_player, char * board
 	board[game_offset + coord] = player_val;
 
 	// adj search vars
-	int coord_stack[MAP_SZ];
+	int16_t coord_stack[MAP_SZ];
 	int coord_stack_sz;
 
 	///////////// check if we should remove stones
@@ -125,11 +125,11 @@ __global__ void move_unit_kernel(int *to_coord, int *moving_player, char * board
 	moved[gm] = 1;
 }
 
-void move_unit_launcher(int * to_coord, int * moving_player, char * moved){
+void move_unit_launcher(int16_t * to_coord, int8_t * moving_player, char * moved){
 	REQ_INIT
 	cudaError_t err;
 
-	BMEM(board_pprev, board, BATCH_MAP_SZ)
+	BMEM(board_pprev, board_prev, BATCH_MAP_SZ)
 	BMEM(board_prev, board, BATCH_MAP_SZ)
 	move_unit_kernel <<< BATCH_SZ, 1 >>> (to_coord, moving_player, board, n_captures, moved, valid_mv_map_internal);
 

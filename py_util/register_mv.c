@@ -21,7 +21,30 @@ static PyObject *register_mv(PyObject *self, PyObject *args){
 	///////////////////////////////
 
 	for(int gm = 0; gm < BATCH_SZ; gm++){
-		if(chosen_coord[gm] == -1) continue;
+		//if(chosen_coord[gm] == -1) continue;
+
+		#ifdef CUDA_DEBUG
+			if(tree_sz[gm] >= TREE_BUFFER_SZ){
+				printf("tree_sz[%i] %i\n", gm, tree_sz[gm]);
+				DASSERT(0);
+			}
+			if(tree_start[gm] < 0 || tree_start[gm] >= tree_sz[gm]){
+				printf("tree_sz[%i] %i\n", gm, tree_sz[gm]);
+				printf("tree_start %i\n", tree_start[gm]);
+				DASSERT(0);
+			}
+			if(list_sz[gm] >= MV_BUFFER_SZ){
+				printf("list_sz[%i] %i\n", gm, list_sz[gm]);
+				DASSERT(0);
+			}
+			int t_ind2 = tree_start[gm];
+			int TO2 = gm*TREE_BUFFER_SZ + t_ind2;
+			if(tree_list_start[TO2] < 0 || tree_list_start[TO2] >= list_sz[gm]){
+				printf("list_sz[%i] %i\n", gm, list_sz[gm]);
+				printf("tree_list_start[%i] %i\n", TO2, tree_list_start[TO2]);
+				DASSERT(0);
+			}
+		#endif
 
 		CUR_TREE_INDS	
 		
@@ -35,11 +58,19 @@ static PyObject *register_mv(PyObject *self, PyObject *args){
 			found = 1;
 			break;
 		}
-		
-		if(found == 0){
-			printf("could not find valid move: gm %i chosen_coord %i\n", gm, chosen_coord[gm]);
-			//LOC = LO;
-		}
+	
+		#ifdef CUDA_DEBUG
+			if(found == 0){
+				printf("could not find valid move: gm %i chosen_coord %i n_valid_mvs %i\n", gm, chosen_coord[gm], n_valid_mvs);
+				for(int mv_ind = 0; mv_ind < n_valid_mvs; mv_ind++){
+					LOC = LO + mv_ind;
+					printf("valid: %i\n", list_valid_mv_inds[LOC]);
+				}
+				for(int gm2 = 0; gm2 < BATCH_SZ; gm2++)
+					printf("to_coords[%i] %i\n", gm2, chosen_coord[gm2]);
+				//LOC = LO;
+			}
+		#endif
 		ASSERT(found != 0, "could not find move");
 
 		// update pointer to tree_start
@@ -54,6 +85,8 @@ static PyObject *register_mv(PyObject *self, PyObject *args){
 			
 			tree_parent[TO_NEW] = t_ind;
 			tree_player[TO_NEW] = moving_player == 0;
+			tree_list_start[TO_NEW] = -1;
+			tree_list_sz[TO_NEW] = 0;
 
 			tree_sz[gm] ++;
 			ASSERT(tree_sz[gm] < TREE_BUFFER_SZ, "tree buffer size exceeded");

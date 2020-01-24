@@ -1,4 +1,4 @@
-__device__ inline char add_blank_adj_to_stack(int coord, int * coord_stack, int *coord_stack_sz, 
+__device__ inline char add_blank_adj_to_stack(int16_t coord, int16_t * coord_stack, int *coord_stack_sz, 
 		char * checked, int game_offset, char * board, int * owner){
 	DASSERT(coord >= 0 && coord < MAP_SZ);
 
@@ -34,9 +34,9 @@ __device__ inline char add_blank_adj_to_stack(int coord, int * coord_stack, int 
 
 #define SCORE_START (MAP_SZ*2)
 #define LARGE_VAL 99999
-__global__ void return_winner_kernel(float * winner, char * board, int * moving_player, float * score){ 
+__global__ void return_winner_kernel(int8_t * winner, char * board, int8_t * moving_player, int16_t * score){ 
 	int32_t game = blockIdx.x;
-	int32_t coord = threadIdx.x;
+	int16_t coord = threadIdx.x;
 	int game_offset = game*MAP_SZ;
 	int gcoord = game_offset + coord;
 
@@ -60,7 +60,7 @@ __global__ void return_winner_kernel(float * winner, char * board, int * moving_
 
 		// adj search vars
 		char checked[MAP_SZ];
-		int coord_stack[MAP_SZ];
+		int16_t coord_stack[MAP_SZ];
 		int coord_stack_sz = 0;
 		for(int i = 0; i < MAP_SZ; i++) checked[i] = 0; 
 		checked[coord] = 1;
@@ -90,7 +90,7 @@ __global__ void return_winner_kernel(float * winner, char * board, int * moving_
 	if(coord != 0)
 		return;
 
-	score[game] = (float)(score_tmp) - (float)(SCORE_START);
+	score[game] = (int16_t)(score_tmp) - (int16_t)(SCORE_START);
 	if(score_tmp > SCORE_START)
 		winner[game] = 1;
 	else if(score_tmp < SCORE_START)
@@ -100,7 +100,7 @@ __global__ void return_winner_kernel(float * winner, char * board, int * moving_
 
 }
 
-void return_winner_launcher(float * winner, int * moving_player, float * score, int * n_captures_out){
+void return_winner_launcher(int8_t * winner, int8_t * moving_player, int16_t * score, int16_t * n_captures_out){
 	REQ_INIT
 
 	cudaError_t err;

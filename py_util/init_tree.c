@@ -1,6 +1,6 @@
 #define ZERO(A, S) memset(A, 0, (S)*sizeof(A[0]));
 
-void init_vecs(){
+/*void init_vecs(){
 	
 	ZERO(tree_player, BATCH_SZ * TREE_BUFFER_SZ)
 	ZERO(list_q_total, BATCH_SZ * MV_BUFFER_SZ)
@@ -19,16 +19,19 @@ void init_vecs(){
 		list_valid_tree_inds[i] = -1;
 		list_prob[i] = -1;
 	}
-}
+}*/
 
 static PyObject *init_tree(PyObject *self, PyObject *args){
 	ZERO(tree_start, BATCH_SZ)
 	ZERO(list_sz, BATCH_SZ)
 
-	for(int i = 0; i < BATCH_SZ; i++)
+	for(int i = 0; i < BATCH_SZ; i++){
 		tree_sz[i] = 1;
+		tree_list_start[i*TREE_BUFFER_SZ] = -1;
+		tree_parent[i*TREE_BUFFER_SZ] = -1;
+	}
 
-	init_vecs();	
+	//init_vecs();	
 
 	Py_RETURN_NONE;
 }

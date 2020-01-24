@@ -30,9 +30,9 @@ char *board, *board2, board_cpu[BATCH_MAP_SZ];
 char *board_prev, *board_pprev;
 char *board_prev2, *board_pprev2;
 
-int * n_captures, *n_captures2; // [N_PLAYERS, BATCH_SZ]
+int16_t * n_captures, *n_captures2; // [N_PLAYERS, BATCH_SZ]
 
-int * ai_to_coord; // [BATCH_SZ], output of move_random_ai, input to move_unit
+int16_t * ai_to_coord; // [BATCH_SZ], output of move_random_ai, input to move_unit
 
 char * valid_mv_map_internal; // [BATCH_SZ, MAP_SZ], output of create_batch, input to move_unit
 char * moved_internal; // [BATCH_SZ] used in move_random_ai, req. input to move_unit_launcher, results not used
@@ -45,7 +45,7 @@ char * moved_internal; // [BATCH_SZ] used in move_random_ai, req. input to move_
 // count valid mvs and store n_valid_mvs
 #define COUNT_VALID \
 	int n_valid_mvs = 0;\
-	int valid_mv_inds[MAP_SZ];\
+	int16_t valid_mv_inds[MAP_SZ];\
 	MAP_LOOP{\
 		if(valid_mv_map_internal[gm_offset + loc]){\
 			valid_mv_inds[n_valid_mvs] = loc;\

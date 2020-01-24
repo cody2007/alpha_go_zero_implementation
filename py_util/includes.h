@@ -15,13 +15,17 @@
 #endif
 
 #define TREE_BUFFER_SZ 500000 //  250000 //190000
-#define MV_BUFFER_SZ 7000000 //5000000 //4500000 //4250000 //4000000 // 3760000
+//#define MV_BUFFER_SZ 7000000
+#define MV_BUFFER_SZ 8000000
+
+//5000000 //4500000 //4250000 //4000000 // 3760000
 
 
 //#define TREE_BUFFER_SZ 19000//0 //70000//(1 200 000)//(800000)//*600000*2)
 //#define MV_BUFFER_SZ 276000//0 //2 000 000 //1200000 //900000 //TREE_BUFFER_SZ
 
 #define BMEM(A, B, SZ) memcpy(A, B, SZ*sizeof(A[0]));
+#define BMEM2(A, B, SZ) memcpy(A, B, SZ*sizeof(B[0]));
 
 //////////////////// tree
 // create_batch: creates leaves (ex. list_valid_mv_inds)
